@@ -1,884 +1,559 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AuthModal } from "./components/AuthModal";
+import { BottomNav, type Tab } from "./components/BottomNav";
+import { Header } from "./components/Header";
+import { PetDropModal } from "./components/PetDropModal";
+import { SaveLoadModal } from "./components/SaveLoadModal";
+import { ScreenAura } from "./components/ScreenAura";
+import { WipeModal } from "./components/WipeModal";
+import { ACHIEVEMENTS } from "./lib/achievements";
+import { buildDistribution, sampleWithBoost } from "./lib/distribution";
+import {
+  applyXpGain,
+  coinMultFromLevel,
+  rarityTiltFromLevel,
+  xpMultFromLevel,
+} from "./lib/level";
+import { PET_BY_ID, rollPetDrop } from "./lib/pets";
+import { CENTER, MAX_NUMBER, RARITY_BY_KEY, rarityFor } from "./lib/rarity";
+import {
+  COIN_BOOSTER_COST,
+  COIN_BOOSTER_DURATION_MS,
+  COIN_BOOSTER_MULT,
+  RARITY_BOOSTER_COST,
+  RARITY_BOOSTER_DURATION_MS,
+  coinUpgradeCost,
+  coinUpgradeMult,
+  rarityUpgradeCost,
+  rarityUpgradeTilt,
+} from "./lib/shop";
+import {
+  emptyProfile,
+  loadAccounts,
+  loadLeaderboard,
+  LS_ACTIVE,
+  LS_MUTED,
+  saveAccounts,
+  saveLeaderboard,
+  upsertLeader,
+} from "./lib/storage";
+import {
+  isMuted,
+  playAchievement,
+  playLevelUp,
+  playPetDrop,
+  playPurchase,
+  playRarity,
+  playRollClick,
+  setMuted,
+} from "./lib/sounds";
+import type { LeaderEntry, Profile } from "./lib/types";
+import { AchievementsView } from "./views/AchievementsView";
+import { LeaderboardView } from "./views/LeaderboardView";
+import { PetsView } from "./views/PetsView";
+import { RollView } from "./views/RollView";
+import { ShopView } from "./views/ShopView";
 
-type RarityKey =
-  | "common"
-  | "uncommon"
-  | "rare"
-  | "epic"
-  | "legendary"
-  | "mythic";
+const ROLL_BASE_DURATION_MS = 800;
+const ROLL_TICK_MS = 70;
 
-type RarityDef = {
-  key: RarityKey;
-  label: string;
-  threshold: number;
-  textStyle: React.CSSProperties;
-  glow: string;
-  badgeBg: string;
-  badgeText: string;
-};
-
-const RARITIES: RarityDef[] = [
-  {
-    key: "common",
-    label: "COMMON",
-    threshold: 0,
-    textStyle: { color: "#ffffff" },
-    glow: "0 0 12px rgba(255,255,255,0.55), 0 0 28px rgba(255,255,255,0.25)",
-    badgeBg: "rgba(255,255,255,0.10)",
-    badgeText: "#ffffff",
-  },
-  {
-    key: "uncommon",
-    label: "UNCOMMON",
-    threshold: 0.5,
-    textStyle: { color: "#22c55e" },
-    glow: "0 0 14px rgba(34,197,94,0.7), 0 0 36px rgba(34,197,94,0.45)",
-    badgeBg: "rgba(34,197,94,0.14)",
-    badgeText: "#4ade80",
-  },
-  {
-    key: "rare",
-    label: "RARE",
-    threshold: 0.75,
-    textStyle: { color: "#06b6d4" },
-    glow: "0 0 16px rgba(6,182,212,0.8), 0 0 42px rgba(6,182,212,0.5)",
-    badgeBg: "rgba(6,182,212,0.16)",
-    badgeText: "#22d3ee",
-  },
-  {
-    key: "epic",
-    label: "EPIC",
-    threshold: 0.88,
-    textStyle: {
-      backgroundImage: "linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%)",
-    },
-    glow: "0 0 18px rgba(59,130,246,0.85), 0 0 48px rgba(30,58,138,0.6)",
-    badgeBg: "linear-gradient(90deg, rgba(59,130,246,0.25), rgba(30,58,138,0.25))",
-    badgeText: "#93c5fd",
-  },
-  {
-    key: "legendary",
-    label: "LEGENDARY",
-    threshold: 0.96,
-    textStyle: {
-      backgroundImage: "linear-gradient(90deg, #facc15 0%, #f97316 100%)",
-    },
-    glow: "0 0 22px rgba(250,204,21,0.85), 0 0 60px rgba(249,115,22,0.6)",
-    badgeBg: "linear-gradient(90deg, rgba(250,204,21,0.25), rgba(249,115,22,0.25))",
-    badgeText: "#fbbf24",
-  },
-  {
-    key: "mythic",
-    label: "MYTHIC",
-    threshold: 0.992,
-    textStyle: {
-      backgroundImage: "linear-gradient(90deg, #000000 0%, #4c1d95 100%)",
-    },
-    glow: "0 0 24px rgba(76,29,149,0.95), 0 0 70px rgba(124,58,237,0.65), 0 0 12px rgba(0,0,0,0.9)",
-    badgeBg: "linear-gradient(90deg, rgba(0,0,0,0.6), rgba(76,29,149,0.45))",
-    badgeText: "#c4b5fd",
-  },
-];
-
-const CENTER = 5000;
-const MAX_NUMBER = 10000;
-const SIGMA = 1700;
-
-// erf approximation (Abramowitz & Stegun 7.1.26)
-function erf(x: number): number {
-  const sign = x < 0 ? -1 : 1;
-  const ax = Math.abs(x);
-  const a1 = 0.254829592;
-  const a2 = -0.284496736;
-  const a3 = 1.421413741;
-  const a4 = -1.453152027;
-  const a5 = 1.061405429;
-  const p = 0.3275911;
-  const t = 1.0 / (1.0 + p * ax);
-  const y =
-    1.0 -
-    ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) *
-      t *
-      Math.exp(-ax * ax);
-  return sign * y;
-}
-
-function normalCdf(x: number, mu = CENTER, sigma = SIGMA): number {
-  return 0.5 * (1 + erf((x - mu) / (sigma * Math.SQRT2)));
-}
-
-// Build the discrete distribution over 0..10000
-function buildDistribution() {
-  const probs = new Float64Array(MAX_NUMBER + 1);
-  // Mass for each integer n is CDF(n+0.5) - CDF(n-0.5), then normalize
-  const lo = normalCdf(-0.5);
-  const hi = normalCdf(MAX_NUMBER + 0.5);
-  const totalMass = hi - lo;
-  for (let n = 0; n <= MAX_NUMBER; n++) {
-    const p = (normalCdf(n + 0.5) - normalCdf(n - 0.5)) / totalMass;
-    probs[n] = p;
-  }
-  // Cumulative for sampling
-  const cum = new Float64Array(MAX_NUMBER + 1);
-  let s = 0;
-  for (let n = 0; n <= MAX_NUMBER; n++) {
-    s += probs[n];
-    cum[n] = s;
-  }
-  return { probs, cum };
-}
-
-function sampleFromCdf(cum: Float64Array): number {
-  const r = Math.random() * cum[cum.length - 1];
-  let lo = 0;
-  let hi = cum.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (cum[mid] < r) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
-// extremeness = how far from center, normalized 0..1
-function extremeness(n: number) {
-  return Math.abs(n - CENTER) / CENTER;
-}
-
-function rarityFor(n: number): RarityDef {
-  const e = extremeness(n);
-  let chosen = RARITIES[0];
-  for (const r of RARITIES) {
-    if (e >= r.threshold) chosen = r;
-  }
-  return chosen;
-}
-
-function chancePctFromProb(p: number): string {
-  const pct = p * 100;
-  if (pct === 0) return "0.000%";
-  if (pct >= 0.001) return pct.toFixed(3) + "%";
-  // For very small probabilities, use scientific notation but still 3 decimal places of precision
-  return pct.toExponential(3) + "%";
-}
-
-// ---- Save code helpers ----
-type ProfileState = {
-  username: string;
-  bestNumber: number | null;
-  bestProb: number | null;
-  worstNumber: number | null;
-  worstProb: number | null;
-  totalRolls: number;
-  rarestNumber: number | null;
-  rarestProb: number | null;
-};
-
-function emptyProfile(username: string): ProfileState {
-  return {
-    username,
-    bestNumber: null,
-    bestProb: null,
-    worstNumber: null,
-    worstProb: null,
-    totalRolls: 0,
-    rarestNumber: null,
-    rarestProb: null,
-  };
-}
-
-function encodeSave(state: ProfileState): string {
-  const json = JSON.stringify(state);
-  // base64 with a small prefix marker
-  const b64 = btoa(unescape(encodeURIComponent(json)));
-  return "RR1-" + b64;
-}
-
-function decodeSave(code: string): ProfileState | null {
-  try {
-    const trimmed = code.trim();
-    if (!trimmed.startsWith("RR1-")) return null;
-    const b64 = trimmed.slice(4);
-    const json = decodeURIComponent(escape(atob(b64)));
-    const parsed = JSON.parse(json);
-    if (typeof parsed.username !== "string") return null;
-    return parsed as ProfileState;
-  } catch {
-    return null;
-  }
-}
-
-// ---- Storage ----
-const LS_USERNAME = "rr.username";
-const LS_PROFILE = "rr.profile";
-const LS_LEADERBOARD = "rr.leaderboard.v1";
-
-type LeaderEntry = {
-  username: string;
-  number: number;
-  prob: number;
-  rarity: RarityKey;
-  timestamp: number;
-};
-
-function loadLeaderboard(): LeaderEntry[] {
-  try {
-    const raw = localStorage.getItem(LS_LEADERBOARD);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr;
-  } catch {
-    return [];
-  }
-}
-
-function saveLeaderboard(entries: LeaderEntry[]) {
-  localStorage.setItem(LS_LEADERBOARD, JSON.stringify(entries));
-}
-
-function upsertLeaderboard(
-  entries: LeaderEntry[],
-  candidate: LeaderEntry,
-): LeaderEntry[] {
-  const existingIdx = entries.findIndex(
-    (e) => e.username.toLowerCase() === candidate.username.toLowerCase(),
+export default function App() {
+  // ---- Auth state ----
+  const [accounts, setAccountsState] = useState<Record<string, Profile>>(() =>
+    loadAccounts(),
   );
-  let next = [...entries];
-  if (existingIdx >= 0) {
-    const existing = next[existingIdx];
-    // Keep the rarer roll (smaller probability)
-    if (candidate.prob < existing.prob) {
-      next[existingIdx] = candidate;
-    }
-  } else {
-    next.push(candidate);
-  }
-  // Sort by rarity ascending probability
-  next.sort((a, b) => a.prob - b.prob);
-  return next.slice(0, 50);
-}
+  const [activeUser, setActiveUser] = useState<string | null>(() => {
+    return localStorage.getItem(LS_ACTIVE);
+  });
 
-function App() {
-  const distRef = useRef(buildDistribution());
-  const dist = distRef.current;
-
-  // Username + profile
-  const [username, setUsername] = useState<string>("");
-  const [showRegister, setShowRegister] = useState<boolean>(false);
-  const [registerInput, setRegisterInput] = useState<string>("");
-  const [profile, setProfile] = useState<ProfileState>(emptyProfile(""));
-
-  // Roll state
-  const [currentNumber, setCurrentNumber] = useState<number | null>(null);
-  const [currentProb, setCurrentProb] = useState<number | null>(null);
-  const [rolling, setRolling] = useState(false);
-  const [displayNumber, setDisplayNumber] = useState<number | null>(null);
-
-  // Leaderboard
-  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
-
-  // Save / load modal
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [saveCode, setSaveCode] = useState("");
-  const [loadInput, setLoadInput] = useState("");
-  const [loadError, setLoadError] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  // Load on mount
+  // Sound mute
+  const [muted, setMutedState] = useState<boolean>(() => {
+    return localStorage.getItem(LS_MUTED) === "1";
+  });
   useEffect(() => {
-    const u = localStorage.getItem(LS_USERNAME);
-    if (u) {
-      setUsername(u);
-      const raw = localStorage.getItem(LS_PROFILE);
-      if (raw) {
-        try {
-          const p = JSON.parse(raw) as ProfileState;
-          setProfile(p);
-        } catch {
-          setProfile(emptyProfile(u));
-        }
-      } else {
-        setProfile(emptyProfile(u));
-      }
-    } else {
-      setShowRegister(true);
-    }
-    setLeaderboard(loadLeaderboard());
+    setMuted(muted);
+    localStorage.setItem(LS_MUTED, muted ? "1" : "0");
+  }, [muted]);
+  // sync helper
+  void isMuted;
+
+  // ---- Leaderboard ----
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>(() =>
+    loadLeaderboard(),
+  );
+  useEffect(() => saveLeaderboard(leaderboard), [leaderboard]);
+
+  // ---- Active profile ----
+  const profile = activeUser ? accounts[activeUser] ?? null : null;
+
+  function persistAccounts(next: Record<string, Profile>) {
+    setAccountsState(next);
+    saveAccounts(next);
+  }
+
+  function updateProfile(mut: (p: Profile) => Profile) {
+    if (!activeUser) return;
+    const cur = accounts[activeUser];
+    if (!cur) return;
+    const updated = mut({ ...cur });
+    const next = { ...accounts, [activeUser]: updated };
+    persistAccounts(next);
+  }
+
+  // ---- UI state ----
+  const [tab, setTab] = useState<Tab>("roll");
+  const [rolling, setRolling] = useState(false);
+  const [displayNumber, setDisplayNumber] = useState(CENTER);
+  const [lastResult, setLastResult] = useState<
+    | (NonNullable<ReturnType<typeof produceRollResult>> & {
+        leveledUp: number;
+      })
+    | null
+  >(null);
+  const [auraColor, setAuraColor] = useState<string | null>(null);
+  const [pulseKey, setPulseKey] = useState(0);
+  const [showSave, setShowSave] = useState(false);
+  const [showWipe, setShowWipe] = useState(false);
+  const [petDropId, setPetDropId] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, []);
 
-  // Persist profile
-  useEffect(() => {
-    if (username) {
-      localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
-    }
-  }, [profile, username]);
+  // ---- Distribution ----
+  const distTilt = useMemo(() => {
+    if (!profile) return 0;
+    const fromUpgrade = rarityUpgradeTilt(profile.upgrades.rarity);
+    const fromLevel = rarityTiltFromLevel(profile.level);
+    const fromBooster =
+      profile.boosters.rarityUntil > now ? 0.4 : 0;
+    const equipped = profile.equippedPet
+      ? PET_BY_ID[profile.equippedPet]
+      : null;
+    const fromPet = equipped?.effect.rarityTilt ?? 0;
+    return Math.min(2, fromUpgrade + fromLevel + fromBooster + fromPet);
+  }, [profile, now]);
 
-  const currentRarity = useMemo(
-    () => (currentNumber == null ? null : rarityFor(currentNumber)),
-    [currentNumber],
-  );
+  const dist = useMemo(() => buildDistribution(distTilt), [distTilt]);
 
-  function handleRegister() {
-    const name = registerInput.trim().slice(0, 20);
-    if (!name) return;
-    localStorage.setItem(LS_USERNAME, name);
-    setUsername(name);
-    setProfile(emptyProfile(name));
-    setShowRegister(false);
-  }
+  const rollSpeedMult = useMemo(() => {
+    if (!profile?.equippedPet) return 1;
+    const pet = PET_BY_ID[profile.equippedPet];
+    return pet?.effect.rollSpeedMult ?? 1;
+  }, [profile]);
 
-  function handleRoll() {
-    if (rolling || !username) return;
+  // ---- Roll logic ----
+  const rollAbortRef = useRef(0);
+  function doRoll() {
+    if (!profile || rolling) return;
+
+    const target = sampleWithBoost(
+      dist.cum,
+      profile.boosters.rarityUntil > now,
+    );
+    const myToken = ++rollAbortRef.current;
     setRolling(true);
+    setLastResult(null);
+    setAuraColor(null);
 
-    // Animated reveal: cycle through random numbers, then settle
-    const finalN = sampleFromCdf(dist.cum);
-    const finalProb = dist.probs[finalN];
+    const tickMs = Math.max(40, ROLL_TICK_MS * rollSpeedMult);
+    const totalMs = Math.max(300, ROLL_BASE_DURATION_MS * rollSpeedMult);
+    const start = performance.now();
 
-    const startTs = performance.now();
-    const duration = 850;
-    let frame = 0;
     const tick = () => {
-      const elapsed = performance.now() - startTs;
-      const t = Math.min(1, elapsed / duration);
-      // Slow the flicker as we approach the end
-      const interval = 30 + t * 90;
-      frame++;
-      if (t < 1) {
-        if (frame % Math.max(1, Math.floor(interval / 16)) === 0) {
-          setDisplayNumber(Math.floor(Math.random() * (MAX_NUMBER + 1)));
-        }
-        requestAnimationFrame(tick);
+      if (myToken !== rollAbortRef.current) return;
+      const elapsed = performance.now() - start;
+      if (elapsed < totalMs) {
+        const easing = 1 - elapsed / totalMs;
+        const spread = Math.max(50, Math.floor(2500 * easing));
+        const fake = clamp(
+          Math.floor(target + (Math.random() - 0.5) * 2 * spread),
+          0,
+          MAX_NUMBER,
+        );
+        setDisplayNumber(fake);
+        playRollClick();
+        setTimeout(tick, tickMs);
       } else {
-        setDisplayNumber(finalN);
-        setCurrentNumber(finalN);
-        setCurrentProb(finalProb);
-        setRolling(false);
-
-        // Update profile + leaderboard
-        setProfile((prev) => {
-          const next: ProfileState = { ...prev, totalRolls: prev.totalRolls + 1 };
-          if (next.bestNumber == null || finalN > next.bestNumber) {
-            next.bestNumber = finalN;
-            next.bestProb = finalProb;
-          }
-          if (next.worstNumber == null || finalN < next.worstNumber) {
-            next.worstNumber = finalN;
-            next.worstProb = finalProb;
-          }
-          if (next.rarestProb == null || finalProb < next.rarestProb) {
-            next.rarestNumber = finalN;
-            next.rarestProb = finalProb;
-          }
-          return next;
-        });
-
-        const r = rarityFor(finalN);
-        const candidate: LeaderEntry = {
-          username,
-          number: finalN,
-          prob: finalProb,
-          rarity: r.key,
-          timestamp: Date.now(),
-        };
-        setLeaderboard((prev) => {
-          const next = upsertLeaderboard(prev, candidate);
-          saveLeaderboard(next);
-          return next;
-        });
+        finalize(target);
       }
     };
-    requestAnimationFrame(tick);
-  }
+    setTimeout(tick, tickMs);
 
-  function openSaveModal() {
-    setSaveCode(encodeSave(profile));
-    setLoadInput("");
-    setLoadError("");
-    setCopied(false);
-    setShowSaveModal(true);
-  }
+    function finalize(n: number) {
+      if (myToken !== rollAbortRef.current) return;
+      setDisplayNumber(n);
+      const result = produceRollResult(n, dist.probs[n], profile!, now);
+      setRolling(false);
 
-  function handleLoadCode() {
-    const decoded = decodeSave(loadInput);
-    if (!decoded) {
-      setLoadError("Invalid save code.");
-      return;
-    }
-    // Adopt the loaded profile and username
-    setUsername(decoded.username);
-    localStorage.setItem(LS_USERNAME, decoded.username);
-    setProfile(decoded);
-    // Add their rarest roll to leaderboard if present
-    if (decoded.rarestNumber != null && decoded.rarestProb != null) {
-      const r = rarityFor(decoded.rarestNumber);
-      setLeaderboard((prev) => {
-        const next = upsertLeaderboard(prev, {
-          username: decoded.username,
-          number: decoded.rarestNumber!,
-          prob: decoded.rarestProb!,
-          rarity: r.key,
-          timestamp: Date.now(),
-        });
-        saveLeaderboard(next);
-        return next;
+      // Maybe drop a pet
+      const tier = result.rarity;
+      const tierProb = sumTierProb(dist.probs, tier);
+      const ownedSet = new Set(Object.keys(profile!.pets));
+      const droppedId = rollPetDrop(tierProb, tier, ownedSet);
+      const droppedPet = droppedId
+        ? !ownedSet.has(droppedId)
+          ? droppedId
+          : null
+        : null;
+      result.petDropped = droppedPet;
+
+      // Apply to profile
+      updateProfile((p) => {
+        // Add coins/xp/rolls
+        p.coins += result.coinsEarned;
+        p.totalRolls += 1;
+        p.rollsByRarity = {
+          ...p.rollsByRarity,
+          [result.rarity]: p.rollsByRarity[result.rarity] + 1,
+        };
+        const lv = applyXpGain(p.level, p.xp, result.xpEarned);
+        p.level = lv.level;
+        p.xp = lv.xpInLevel;
+        if (lv.leveledUp > 0) playLevelUp();
+
+        // Update best/worst/rarest
+        const distFromCenter = Math.abs(n - CENTER);
+        if (
+          p.bestNumber == null ||
+          Math.abs(p.bestNumber - CENTER) > distFromCenter
+        ) {
+          p.bestNumber = n;
+          p.bestProb = result.prob;
+        }
+        if (
+          p.worstNumber == null ||
+          Math.abs(p.worstNumber - CENTER) < distFromCenter
+        ) {
+          p.worstNumber = n;
+          p.worstProb = result.prob;
+        }
+        if (p.rarestProb == null || result.prob < p.rarestProb) {
+          p.rarestNumber = n;
+          p.rarestProb = result.prob;
+        }
+
+        // Pet drop
+        if (droppedPet) {
+          p.pets = {
+            ...p.pets,
+            [droppedPet]: { ownedAt: Date.now() },
+          };
+        }
+        return p;
       });
+
+      // Achievements check
+      checkAndAwardAchievements({
+        lastRoll: { number: n, rarity: result.rarity },
+      });
+
+      // Leaderboard if rare enough
+      if (result.prob < 0.001) {
+        setLeaderboard((lb) =>
+          upsertLeader(lb, {
+            username: profile!.username,
+            number: n,
+            prob: result.prob,
+            rarity: result.rarity,
+            level: profile!.level,
+            timestamp: Date.now(),
+          }),
+        );
+      }
+
+      // Effects
+      const r = RARITY_BY_KEY[result.rarity];
+      setAuraColor(r.auraColor);
+      setPulseKey((k) => k + 1);
+      playRarity(result.rarity);
+
+      setLastResult({ ...result, leveledUp: 0 });
+
+      if (droppedPet) {
+        playPetDrop();
+        setTimeout(() => setPetDropId(droppedPet), 600);
+      }
     }
-    setLoadError("");
-    setShowSaveModal(false);
   }
 
-  function handleCopy() {
-    navigator.clipboard.writeText(saveCode).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+  // ---- Achievement check ----
+  function checkAndAwardAchievements(ctx: {
+    lastRoll: { number: number; rarity: import("./lib/types").RarityKey } | null;
+  }) {
+    if (!activeUser) return;
+    const cur = accounts[activeUser];
+    if (!cur) return;
+    let next = { ...cur };
+    let awardedAny = false;
+    for (const a of ACHIEVEMENTS) {
+      if (next.achievements[a.id]) continue;
+      if (a.check(next, ctx)) {
+        next = {
+          ...next,
+          achievements: { ...next.achievements, [a.id]: Date.now() },
+          coins: next.coins + a.reward.coins,
+          gems: next.gems + a.reward.gems,
+        };
+        if (a.reward.xp > 0) {
+          const lv = applyXpGain(next.level, next.xp, a.reward.xp);
+          next.level = lv.level;
+          next.xp = lv.xpInLevel;
+        }
+        awardedAny = true;
+      }
+    }
+    if (awardedAny) {
+      playAchievement();
+      const map = { ...accounts, [activeUser]: next };
+      persistAccounts(map);
+    }
+  }
+
+  // ---- Shop actions ----
+  function buyCoinUpgrade() {
+    if (!profile) return;
+    const cost = coinUpgradeCost(profile.upgrades.coin);
+    if (profile.coins < cost.coins || profile.gems < cost.gems) return;
+    updateProfile((p) => {
+      p.coins -= cost.coins;
+      p.gems -= cost.gems;
+      p.upgrades = { ...p.upgrades, coin: p.upgrades.coin + 1 };
+      return p;
+    });
+    playPurchase();
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+  function buyRarityUpgrade() {
+    if (!profile) return;
+    const cost = rarityUpgradeCost(profile.upgrades.rarity);
+    if (profile.coins < cost.coins || profile.gems < cost.gems) return;
+    updateProfile((p) => {
+      p.coins -= cost.coins;
+      p.gems -= cost.gems;
+      p.upgrades = { ...p.upgrades, rarity: p.upgrades.rarity + 1 };
+      return p;
+    });
+    playPurchase();
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+  function buyCoinBooster() {
+    if (!profile || profile.coins < COIN_BOOSTER_COST) return;
+    updateProfile((p) => {
+      p.coins -= COIN_BOOSTER_COST;
+      const base = Math.max(p.boosters.coinUntil, Date.now());
+      p.boosters = {
+        ...p.boosters,
+        coinUntil: base + COIN_BOOSTER_DURATION_MS,
+      };
+      return p;
+    });
+    playPurchase();
+  }
+  function buyRarityBooster() {
+    if (!profile || profile.coins < RARITY_BOOSTER_COST) return;
+    updateProfile((p) => {
+      p.coins -= RARITY_BOOSTER_COST;
+      const base = Math.max(p.boosters.rarityUntil, Date.now());
+      p.boosters = {
+        ...p.boosters,
+        rarityUntil: base + RARITY_BOOSTER_DURATION_MS,
+      };
+      return p;
+    });
+    playPurchase();
+  }
+  function buyPet(id: string) {
+    const pet = PET_BY_ID[id];
+    if (!profile || !pet) return;
+    if (profile.pets[id]) return;
+    if (profile.coins < pet.costCoins || profile.gems < pet.costGems) return;
+    updateProfile((p) => {
+      p.coins -= pet.costCoins;
+      p.gems -= pet.costGems;
+      p.pets = { ...p.pets, [id]: { ownedAt: Date.now() } };
+      return p;
+    });
+    playPurchase();
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+  function equipPet(id: string | null) {
+    if (!profile) return;
+    if (id && !profile.pets[id]) return;
+    updateProfile((p) => {
+      p.equippedPet = id;
+      return p;
     });
   }
 
-  function handleChangeUser() {
-    setRegisterInput("");
-    setShowRegister(true);
+  // ---- Auth handlers ----
+  function handleSignup(p: Profile) {
+    const key = p.username.toLowerCase();
+    const next = { ...accounts, [key]: p };
+    persistAccounts(next);
+    setActiveUser(key);
+    localStorage.setItem(LS_ACTIVE, key);
+  }
+  function handleLogin(key: string) {
+    setActiveUser(key);
+    localStorage.setItem(LS_ACTIVE, key);
+  }
+  function handleLoadFromCode(p: Profile) {
+    const key = p.username.toLowerCase();
+    const next = { ...accounts, [key]: p };
+    persistAccounts(next);
+    setActiveUser(key);
+    localStorage.setItem(LS_ACTIVE, key);
+  }
+  function handleLogout() {
+    setActiveUser(null);
+    localStorage.removeItem(LS_ACTIVE);
+    setTab("roll");
+    setLastResult(null);
+    setAuraColor(null);
+  }
+  function handleWipe() {
+    if (!activeUser || !profile) return;
+    const fresh = emptyProfile(profile.username, profile.passwordHash);
+    const next = { ...accounts, [activeUser]: fresh };
+    persistAccounts(next);
+    setShowWipe(false);
+    setLastResult(null);
+    setAuraColor(null);
   }
 
   // ---- Render ----
-  const lowestRarity =
-    profile.worstNumber != null ? rarityFor(profile.worstNumber) : null;
-  const highestRarity =
-    profile.bestNumber != null ? rarityFor(profile.bestNumber) : null;
+  if (!profile) {
+    return (
+      <div className="min-h-dvh">
+        <AuthModal
+          accounts={accounts}
+          onLogin={handleLogin}
+          onSignup={handleSignup}
+          onLoadFromCode={handleLoadFromCode}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-[100dvh] w-full px-3 pb-8 pt-4">
-      <div className="mx-auto max-w-md">
-        {/* Header */}
-        <header className="mb-4">
-          <div className="flex items-end justify-between gap-2">
-            <div className="min-w-0">
-              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white">
-                Rarity Roller
-              </h1>
-              <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
-                Roll 0–10,000. Edges are exponentially rarer.
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1.5">
-              <div className="max-w-[140px] truncate rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 text-[11px]">
-                <span className="text-zinc-500">player:</span>{" "}
-                <span className="font-semibold text-white">
-                  {username || "—"}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-2 flex gap-2">
-            <button
-              onClick={handleChangeUser}
-              className="flex-1 rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 active:bg-zinc-800"
-            >
-              Change name
-            </button>
-            <button
-              onClick={openSaveModal}
-              disabled={!username}
-              className="flex-1 rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 active:bg-zinc-800 disabled:opacity-40"
-            >
-              Save / Load
-            </button>
-          </div>
-        </header>
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-3 pb-20">
+      <ScreenAura color={auraColor} pulseKey={pulseKey} />
+      <Header
+        profile={profile}
+        muted={muted}
+        onToggleMute={() => setMutedState((m) => !m)}
+        onOpenSave={() => setShowSave(true)}
+        onOpenWipe={() => setShowWipe(true)}
+        onLogout={handleLogout}
+      />
 
-        {/* Roll panel */}
-        <section>
-          <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 px-4 py-6 shadow-2xl">
-            <div className="absolute inset-0 -z-10 opacity-40 blur-3xl">
-              <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-700/20" />
-            </div>
-
-            <div className="flex min-h-[260px] flex-col items-center justify-center text-center">
-              {/* Chance above the number */}
-              <div className="mb-2 h-5 text-[12px] tracking-wide text-zinc-400">
-                {currentProb != null ? (
-                  <span>
-                    chance:{" "}
-                    <span className="font-semibold text-zinc-200">
-                      {chancePctFromProb(currentProb)}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-zinc-600">press roll to begin</span>
-                )}
-              </div>
-
-              {/* The Number */}
-              <div
-                className={
-                  "select-none text-6xl font-black leading-none " +
-                  (currentRarity &&
-                  (currentRarity.key === "epic" ||
-                    currentRarity.key === "legendary" ||
-                    currentRarity.key === "mythic")
-                    ? "gradient-text"
-                    : "")
-                }
-                style={{
-                  ...(currentRarity?.textStyle ?? { color: "#9ca3af" }),
-                  textShadow: currentRarity?.glow ?? "none",
-                  filter: rolling ? "blur(1px)" : "none",
-                  transition: "filter 200ms ease",
-                }}
-              >
-                {displayNumber != null
-                  ? displayNumber.toLocaleString()
-                  : "0000"}
-              </div>
-
-              {/* Rarity below the number */}
-              <div className="mt-3 h-6">
-                {currentRarity ? (
-                  <span
-                    className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-[0.2em]"
-                    style={{
-                      background: currentRarity.badgeBg,
-                      color: currentRarity.badgeText,
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    {currentRarity.label}
-                  </span>
-                ) : (
-                  <span className="text-[10px] tracking-[0.2em] text-zinc-600">
-                    ———
-                  </span>
-                )}
-              </div>
-
-              {/* Roll button */}
-              <button
-                onClick={handleRoll}
-                disabled={rolling || !username}
-                className="mt-6 w-full rounded-xl border border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-900 px-8 py-4 text-base font-bold tracking-wide text-white shadow-lg active:scale-[0.98] active:from-zinc-700 active:to-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {rolling ? "ROLLING…" : "ROLL"}
-              </button>
-            </div>
-          </div>
-
-          {/* Stats: lowest / highest */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <StatCard
-              label="Lowest"
-              number={profile.worstNumber}
-              prob={profile.worstProb}
-              rarity={lowestRarity}
-            />
-            <StatCard
-              label="Highest"
-              number={profile.bestNumber}
-              prob={profile.bestProb}
-              rarity={highestRarity}
-            />
-          </div>
-
-          <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-zinc-500">
-            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
-              <div className="text-zinc-500">rolls</div>
-              <div className="font-semibold text-zinc-200">
-                {profile.totalRolls.toLocaleString()}
-              </div>
-            </div>
-            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
-              <div className="text-zinc-500">rarest #</div>
-              <div className="truncate font-semibold text-zinc-200">
-                {profile.rarestNumber != null
-                  ? profile.rarestNumber.toLocaleString()
-                  : "—"}
-              </div>
-            </div>
-            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
-              <div className="text-zinc-500">rarest %</div>
-              <div className="truncate font-semibold text-zinc-200">
-                {profile.rarestProb != null
-                  ? chancePctFromProb(profile.rarestProb)
-                  : "—"}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Leaderboard */}
-        <aside className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-bold text-white">Leaderboard</h2>
-            <span className="text-[10px] uppercase tracking-widest text-zinc-500">
-              rarest first
-            </span>
-          </div>
-          {leaderboard.length === 0 ? (
-            <div className="rounded-md border border-dashed border-zinc-800 p-5 text-center text-xs text-zinc-500">
-              No rolls yet. Be the first.
-            </div>
-          ) : (
-            <ol className="scroll-hide max-h-[60vh] space-y-1.5 overflow-y-auto pr-1">
-              {leaderboard.map((e, i) => {
-                const r = RARITIES.find((x) => x.key === e.rarity)!;
-                return (
-                  <li
-                    key={`${e.username}-${e.timestamp}-${i}`}
-                    className="flex items-center gap-2.5 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-2.5 py-2"
-                  >
-                    <div className="w-5 text-right font-mono text-[11px] text-zinc-500">
-                      {i + 1}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-semibold text-zinc-100">
-                        {e.username}
-                      </div>
-                      <div className="text-[10px] uppercase tracking-widest" style={{ color: r.badgeText }}>
-                        {r.label}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className={
-                          "text-sm font-bold tabular-nums " +
-                          (r.key === "epic" || r.key === "legendary" || r.key === "mythic"
-                            ? "gradient-text"
-                            : "")
-                        }
-                        style={{
-                          ...r.textStyle,
-                          textShadow: r.glow,
-                        }}
-                      >
-                        {e.number.toLocaleString()}
-                      </div>
-                      <div className="text-[10px] text-zinc-500">
-                        {chancePctFromProb(e.prob)}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-
-          {/* Rarity legend */}
-          <div className="mt-4 border-t border-zinc-800 pt-3">
-            <div className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">
-              tiers
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {RARITIES.map((r) => (
-                <span
-                  key={r.key}
-                  className="rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.18em]"
-                  style={{
-                    background: r.badgeBg,
-                    color: r.badgeText,
-                    border: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {r.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      {/* Username register modal */}
-      {showRegister && (
-        <Modal>
-          <div className="mb-1 text-xs uppercase tracking-[0.25em] text-zinc-500">
-            Welcome
-          </div>
-          <h2 className="mb-4 text-2xl font-bold text-white">
-            Choose a username
-          </h2>
-          <input
-            value={registerInput}
-            onChange={(e) => setRegisterInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-            maxLength={20}
-            placeholder="your name…"
-            autoFocus
-            className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-4 py-3 text-base text-white outline-none focus:border-zinc-500"
-          />
-          <div className="mt-2 text-xs text-zinc-500">
-            Up to 20 characters. Stored locally on this device.
-          </div>
-          <div className="mt-5 flex justify-end gap-2">
-            {username && (
-              <button
-                onClick={() => setShowRegister(false)}
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              onClick={handleRegister}
-              disabled={!registerInput.trim()}
-              className="rounded-md border border-zinc-600 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200 disabled:opacity-40"
-            >
-              Continue
-            </button>
-          </div>
-        </Modal>
+      {tab === "roll" && (
+        <RollView
+          profile={profile}
+          rolling={rolling}
+          displayNumber={displayNumber}
+          lastResult={lastResult}
+          onRoll={doRoll}
+          rollSpeedMult={rollSpeedMult}
+          now={now}
+        />
+      )}
+      {tab === "shop" && (
+        <ShopView
+          profile={profile}
+          now={now}
+          onBuyCoinUpgrade={buyCoinUpgrade}
+          onBuyRarityUpgrade={buyRarityUpgrade}
+          onBuyCoinBooster={buyCoinBooster}
+          onBuyRarityBooster={buyRarityBooster}
+        />
+      )}
+      {tab === "pets" && (
+        <PetsView profile={profile} onEquip={equipPet} onBuyPet={buyPet} />
+      )}
+      {tab === "achievements" && <AchievementsView profile={profile} />}
+      {tab === "leaderboard" && (
+        <LeaderboardView entries={leaderboard} currentUser={profile.username} />
       )}
 
-      {/* Save / Load modal */}
-      {showSaveModal && (
-        <Modal onClose={() => setShowSaveModal(false)}>
-          <h2 className="mb-1 text-2xl font-bold text-white">Save / Load</h2>
-          <p className="mb-5 text-sm text-zinc-400">
-            Copy your save code to back up your progress, or paste one to
-            restore it on any device.
-          </p>
+      <BottomNav active={tab} onChange={setTab} />
 
-          <div className="mb-2 text-xs uppercase tracking-widest text-zinc-500">
-            your save code
-          </div>
-          <textarea
-            value={saveCode}
-            readOnly
-            rows={4}
-            className="scroll-hide w-full resize-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200 outline-none"
-          />
-          <div className="mt-2 flex justify-end">
-            <button
-              onClick={handleCopy}
-              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
-            >
-              {copied ? "Copied!" : "Copy code"}
-            </button>
-          </div>
-
-          <div className="my-5 h-px bg-zinc-800" />
-
-          <div className="mb-2 text-xs uppercase tracking-widest text-zinc-500">
-            load a save code
-          </div>
-          <textarea
-            value={loadInput}
-            onChange={(e) => {
-              setLoadInput(e.target.value);
-              setLoadError("");
-            }}
-            rows={3}
-            placeholder="paste a code that starts with RR1-…"
-            className="scroll-hide w-full resize-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-xs text-zinc-200 outline-none focus:border-zinc-500"
-          />
-          {loadError && (
-            <div className="mt-2 text-xs text-red-400">{loadError}</div>
-          )}
-
-          <div className="mt-5 flex justify-end gap-2">
-            <button
-              onClick={() => setShowSaveModal(false)}
-              className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-            >
-              Close
-            </button>
-            <button
-              onClick={handleLoadCode}
-              disabled={!loadInput.trim()}
-              className="rounded-md border border-zinc-600 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 disabled:opacity-40"
-            >
-              Load
-            </button>
-          </div>
-        </Modal>
+      {showSave && (
+        <SaveLoadModal profile={profile} onClose={() => setShowSave(false)} />
+      )}
+      {showWipe && (
+        <WipeModal
+          username={profile.username}
+          onCancel={() => setShowWipe(false)}
+          onConfirm={handleWipe}
+        />
+      )}
+      {petDropId && (
+        <PetDropModal
+          petId={petDropId}
+          onClose={() => setPetDropId(null)}
+          onEquip={() => {
+            equipPet(petDropId);
+            setPetDropId(null);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function StatCard({
-  label,
-  number,
-  prob,
-  rarity,
-}: {
-  label: string;
-  number: number | null;
-  prob: number | null;
-  rarity: RarityDef | null;
-}) {
-  const isGradient =
-    rarity &&
-    (rarity.key === "epic" ||
-      rarity.key === "legendary" ||
-      rarity.key === "mythic");
-  return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
-      <div className="mb-1 text-xs uppercase tracking-widest text-zinc-500">
-        {label}
-      </div>
-      {number == null ? (
-        <div className="text-2xl font-bold text-zinc-600">—</div>
-      ) : (
-        <>
-          <div
-            className={
-              "text-3xl font-extrabold tabular-nums " +
-              (isGradient ? "gradient-text" : "")
-            }
-            style={{
-              ...(rarity?.textStyle ?? { color: "#e5e7eb" }),
-              textShadow: rarity?.glow ?? "none",
-              lineHeight: 1.1,
-            }}
-          >
-            {number.toLocaleString()}
-          </div>
-          <div className="mt-2 flex items-center justify-between">
-            {rarity && (
-              <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.18em]"
-                style={{
-                  background: rarity.badgeBg,
-                  color: rarity.badgeText,
-                  border: "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
-                {rarity.label}
-              </span>
-            )}
-            <span className="text-xs text-zinc-400">
-              chance:{" "}
-              <span className="font-semibold text-zinc-200">
-                {prob != null ? chancePctFromProb(prob) : "—"}
-              </span>
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  );
+// ---- Helpers ----
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
 }
 
-function Modal({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose?: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
+function sumTierProb(
+  probs: Float64Array,
+  tier: import("./lib/types").RarityKey,
+): number {
+  let total = 0;
+  for (let n = 0; n <= MAX_NUMBER; n++) {
+    if (rarityFor(n).key === tier) total += probs[n];
+  }
+  return total;
 }
 
-export default App;
+function produceRollResult(
+  n: number,
+  prob: number,
+  profile: Profile,
+  now: number,
+) {
+  const r = rarityFor(n);
+  const equipped = profile.equippedPet ? PET_BY_ID[profile.equippedPet] : null;
+  const baseCoins = r.baseCoins;
+  const baseXp = r.baseXp;
+
+  const upgradeCoinMult = coinUpgradeMult(profile.upgrades.coin);
+  const levelCoinMult = coinMultFromLevel(profile.level);
+  const petCoinMult = equipped?.effect.coinMult ?? 1;
+  const boosterCoinMult =
+    profile.boosters.coinUntil > now ? COIN_BOOSTER_MULT : 1;
+  const coinMult =
+    upgradeCoinMult * levelCoinMult * petCoinMult * boosterCoinMult;
+
+  const levelXpMult = xpMultFromLevel(profile.level);
+  const petXpMult = equipped?.effect.xpMult ?? 1;
+  const xpMult = levelXpMult * petXpMult;
+
+  return {
+    number: n,
+    prob,
+    rarity: r.key,
+    baseCoins,
+    coinMult,
+    coinsEarned: Math.max(1, Math.floor(baseCoins * coinMult)),
+    baseXp,
+    xpMult,
+    xpEarned: Math.max(1, Math.floor(baseXp * xpMult)),
+    petDropped: null as string | null,
+  };
+}
