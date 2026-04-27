@@ -449,241 +449,242 @@ function App() {
     profile.bestNumber != null ? rarityFor(profile.bestNumber) : null;
 
   return (
-    <div className="min-h-screen w-full px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-6xl">
+    <div className="min-h-[100dvh] w-full px-3 pb-8 pt-4">
+      <div className="mx-auto max-w-md">
         {/* Header */}
-        <header className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Rarity Roller
-            </h1>
-            <p className="mt-1 text-sm text-zinc-400">
-              Roll a number 0–10,000. The closer to the edges, the rarer.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-1.5 text-sm">
-              <span className="text-zinc-500">player:</span>{" "}
-              <span className="font-semibold text-white">
-                {username || "—"}
-              </span>
+        <header className="mb-4">
+          <div className="flex items-end justify-between gap-2">
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white">
+                Rarity Roller
+              </h1>
+              <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
+                Roll 0–10,000. Edges are exponentially rarer.
+              </p>
             </div>
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <div className="max-w-[140px] truncate rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 text-[11px]">
+                <span className="text-zinc-500">player:</span>{" "}
+                <span className="font-semibold text-white">
+                  {username || "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex gap-2">
             <button
               onClick={handleChangeUser}
-              className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-zinc-800"
+              className="flex-1 rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 active:bg-zinc-800"
             >
-              Change
+              Change name
             </button>
             <button
               onClick={openSaveModal}
               disabled={!username}
-              className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-1.5 text-sm text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-40"
+              className="flex-1 rounded-md border border-zinc-700/70 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 active:bg-zinc-800 disabled:opacity-40"
             >
               Save / Load
             </button>
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Roll panel */}
-          <section className="lg:col-span-2">
-            <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 p-8 shadow-2xl">
-              <div className="absolute inset-0 -z-10 opacity-40 blur-3xl">
-                <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-700/20" />
-              </div>
+        {/* Roll panel */}
+        <section>
+          <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900/80 to-zinc-950/80 px-4 py-6 shadow-2xl">
+            <div className="absolute inset-0 -z-10 opacity-40 blur-3xl">
+              <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-violet-700/20" />
+            </div>
 
-              <div className="flex min-h-[340px] flex-col items-center justify-center text-center">
-                {/* Chance above the number */}
-                <div className="mb-3 h-6 text-sm tracking-wide text-zinc-400">
-                  {currentProb != null ? (
-                    <span>
-                      chance:{" "}
-                      <span className="font-semibold text-zinc-200">
-                        {chancePctFromProb(currentProb)}
-                      </span>
+            <div className="flex min-h-[260px] flex-col items-center justify-center text-center">
+              {/* Chance above the number */}
+              <div className="mb-2 h-5 text-[12px] tracking-wide text-zinc-400">
+                {currentProb != null ? (
+                  <span>
+                    chance:{" "}
+                    <span className="font-semibold text-zinc-200">
+                      {chancePctFromProb(currentProb)}
                     </span>
-                  ) : (
-                    <span className="text-zinc-600">press roll to begin</span>
-                  )}
-                </div>
-
-                {/* The Number */}
-                <div
-                  className={
-                    "select-none text-7xl font-black sm:text-8xl " +
-                    (currentRarity &&
-                    (currentRarity.key === "epic" ||
-                      currentRarity.key === "legendary" ||
-                      currentRarity.key === "mythic")
-                      ? "gradient-text"
-                      : "")
-                  }
-                  style={{
-                    ...(currentRarity?.textStyle ?? { color: "#9ca3af" }),
-                    textShadow: currentRarity?.glow ?? "none",
-                    filter: rolling ? "blur(1px)" : "none",
-                    transition: "filter 200ms ease",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {displayNumber != null
-                    ? displayNumber.toLocaleString()
-                    : "0000"}
-                </div>
-
-                {/* Rarity below the number */}
-                <div className="mt-4 h-7">
-                  {currentRarity ? (
-                    <span
-                      className="inline-block rounded-full px-3 py-1 text-xs font-bold tracking-[0.2em]"
-                      style={{
-                        background: currentRarity.badgeBg,
-                        color: currentRarity.badgeText,
-                        border: "1px solid rgba(255,255,255,0.08)",
-                      }}
-                    >
-                      {currentRarity.label}
-                    </span>
-                  ) : (
-                    <span className="text-xs tracking-[0.2em] text-zinc-600">
-                      ———
-                    </span>
-                  )}
-                </div>
-
-                {/* Roll button */}
-                <button
-                  onClick={handleRoll}
-                  disabled={rolling || !username}
-                  className="mt-10 rounded-xl border border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-900 px-10 py-4 text-lg font-bold tracking-wide text-white shadow-lg transition hover:from-zinc-700 hover:to-zinc-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {rolling ? "ROLLING…" : "ROLL"}
-                </button>
+                  </span>
+                ) : (
+                  <span className="text-zinc-600">press roll to begin</span>
+                )}
               </div>
-            </div>
 
-            {/* Stats: lowest / highest */}
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <StatCard
-                label="Lowest rolled"
-                number={profile.worstNumber}
-                prob={profile.worstProb}
-                rarity={lowestRarity}
-              />
-              <StatCard
-                label="Highest rolled"
-                number={profile.bestNumber}
-                prob={profile.bestProb}
-                rarity={highestRarity}
-              />
-            </div>
+              {/* The Number */}
+              <div
+                className={
+                  "select-none text-6xl font-black leading-none " +
+                  (currentRarity &&
+                  (currentRarity.key === "epic" ||
+                    currentRarity.key === "legendary" ||
+                    currentRarity.key === "mythic")
+                    ? "gradient-text"
+                    : "")
+                }
+                style={{
+                  ...(currentRarity?.textStyle ?? { color: "#9ca3af" }),
+                  textShadow: currentRarity?.glow ?? "none",
+                  filter: rolling ? "blur(1px)" : "none",
+                  transition: "filter 200ms ease",
+                }}
+              >
+                {displayNumber != null
+                  ? displayNumber.toLocaleString()
+                  : "0000"}
+              </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-4 text-sm text-zinc-500 sm:grid-cols-3">
-              <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-3 py-2">
-                <span className="text-zinc-500">total rolls:</span>{" "}
-                <span className="font-semibold text-zinc-200">
-                  {profile.totalRolls.toLocaleString()}
-                </span>
-              </div>
-              <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-3 py-2">
-                <span className="text-zinc-500">rarest roll:</span>{" "}
-                <span className="font-semibold text-zinc-200">
-                  {profile.rarestNumber != null
-                    ? profile.rarestNumber.toLocaleString()
-                    : "—"}
-                </span>
-              </div>
-              <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-3 py-2">
-                <span className="text-zinc-500">rarest chance:</span>{" "}
-                <span className="font-semibold text-zinc-200">
-                  {profile.rarestProb != null
-                    ? chancePctFromProb(profile.rarestProb)
-                    : "—"}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* Leaderboard */}
-          <aside className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white">Leaderboard</h2>
-              <span className="text-xs uppercase tracking-widest text-zinc-500">
-                rarest first
-              </span>
-            </div>
-            {leaderboard.length === 0 ? (
-              <div className="rounded-md border border-dashed border-zinc-800 p-6 text-center text-sm text-zinc-500">
-                No rolls yet. Be the first.
-              </div>
-            ) : (
-              <ol className="scroll-hide max-h-[520px] space-y-2 overflow-y-auto pr-1">
-                {leaderboard.map((e, i) => {
-                  const r = RARITIES.find((x) => x.key === e.rarity)!;
-                  return (
-                    <li
-                      key={`${e.username}-${e.timestamp}-${i}`}
-                      className="flex items-center gap-3 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2"
-                    >
-                      <div className="w-6 text-right text-xs font-mono text-zinc-500">
-                        {i + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-semibold text-zinc-100">
-                          {e.username}
-                        </div>
-                        <div className="text-[11px] uppercase tracking-widest" style={{ color: r.badgeText }}>
-                          {r.label}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={
-                            "text-sm font-bold tabular-nums " +
-                            (r.key === "epic" || r.key === "legendary" || r.key === "mythic"
-                              ? "gradient-text"
-                              : "")
-                          }
-                          style={{
-                            ...r.textStyle,
-                            textShadow: r.glow,
-                          }}
-                        >
-                          {e.number.toLocaleString()}
-                        </div>
-                        <div className="text-[11px] text-zinc-500">
-                          {chancePctFromProb(e.prob)}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-
-            {/* Rarity legend */}
-            <div className="mt-5 border-t border-zinc-800 pt-4">
-              <div className="mb-2 text-xs uppercase tracking-widest text-zinc-500">
-                tiers
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {RARITIES.map((r) => (
+              {/* Rarity below the number */}
+              <div className="mt-3 h-6">
+                {currentRarity ? (
                   <span
-                    key={r.key}
-                    className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-[0.18em]"
+                    className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-[0.2em]"
                     style={{
-                      background: r.badgeBg,
-                      color: r.badgeText,
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: currentRarity.badgeBg,
+                      color: currentRarity.badgeText,
+                      border: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
-                    {r.label}
+                    {currentRarity.label}
                   </span>
-                ))}
+                ) : (
+                  <span className="text-[10px] tracking-[0.2em] text-zinc-600">
+                    ———
+                  </span>
+                )}
+              </div>
+
+              {/* Roll button */}
+              <button
+                onClick={handleRoll}
+                disabled={rolling || !username}
+                className="mt-6 w-full rounded-xl border border-zinc-700/80 bg-gradient-to-b from-zinc-800 to-zinc-900 px-8 py-4 text-base font-bold tracking-wide text-white shadow-lg active:scale-[0.98] active:from-zinc-700 active:to-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {rolling ? "ROLLING…" : "ROLL"}
+              </button>
+            </div>
+          </div>
+
+          {/* Stats: lowest / highest */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <StatCard
+              label="Lowest"
+              number={profile.worstNumber}
+              prob={profile.worstProb}
+              rarity={lowestRarity}
+            />
+            <StatCard
+              label="Highest"
+              number={profile.bestNumber}
+              prob={profile.bestProb}
+              rarity={highestRarity}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-zinc-500">
+            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
+              <div className="text-zinc-500">rolls</div>
+              <div className="font-semibold text-zinc-200">
+                {profile.totalRolls.toLocaleString()}
               </div>
             </div>
-          </aside>
-        </div>
+            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
+              <div className="text-zinc-500">rarest #</div>
+              <div className="truncate font-semibold text-zinc-200">
+                {profile.rarestNumber != null
+                  ? profile.rarestNumber.toLocaleString()
+                  : "—"}
+              </div>
+            </div>
+            <div className="rounded-md border border-zinc-800/80 bg-zinc-900/40 px-2 py-1.5">
+              <div className="text-zinc-500">rarest %</div>
+              <div className="truncate font-semibold text-zinc-200">
+                {profile.rarestProb != null
+                  ? chancePctFromProb(profile.rarestProb)
+                  : "—"}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Leaderboard */}
+        <aside className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-bold text-white">Leaderboard</h2>
+            <span className="text-[10px] uppercase tracking-widest text-zinc-500">
+              rarest first
+            </span>
+          </div>
+          {leaderboard.length === 0 ? (
+            <div className="rounded-md border border-dashed border-zinc-800 p-5 text-center text-xs text-zinc-500">
+              No rolls yet. Be the first.
+            </div>
+          ) : (
+            <ol className="scroll-hide max-h-[60vh] space-y-1.5 overflow-y-auto pr-1">
+              {leaderboard.map((e, i) => {
+                const r = RARITIES.find((x) => x.key === e.rarity)!;
+                return (
+                  <li
+                    key={`${e.username}-${e.timestamp}-${i}`}
+                    className="flex items-center gap-2.5 rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-2.5 py-2"
+                  >
+                    <div className="w-5 text-right font-mono text-[11px] text-zinc-500">
+                      {i + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-zinc-100">
+                        {e.username}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: r.badgeText }}>
+                        {r.label}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className={
+                          "text-sm font-bold tabular-nums " +
+                          (r.key === "epic" || r.key === "legendary" || r.key === "mythic"
+                            ? "gradient-text"
+                            : "")
+                        }
+                        style={{
+                          ...r.textStyle,
+                          textShadow: r.glow,
+                        }}
+                      >
+                        {e.number.toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-zinc-500">
+                        {chancePctFromProb(e.prob)}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+
+          {/* Rarity legend */}
+          <div className="mt-4 border-t border-zinc-800 pt-3">
+            <div className="mb-2 text-[10px] uppercase tracking-widest text-zinc-500">
+              tiers
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {RARITIES.map((r) => (
+                <span
+                  key={r.key}
+                  className="rounded-full px-2 py-0.5 text-[9px] font-bold tracking-[0.18em]"
+                  style={{
+                    background: r.badgeBg,
+                    color: r.badgeText,
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  {r.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </aside>
       </div>
 
       {/* Username register modal */}
