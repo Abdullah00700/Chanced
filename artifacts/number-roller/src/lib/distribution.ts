@@ -19,13 +19,19 @@ export type Distribution = {
 //   epic ≈ 1.5%
 //   legendary ≈ 0.4%
 //   mythic ≈ 0.1%   (≈ 1 in 1000)
-const TIER_BASE: Record<RarityKey, { s: number; e: number; lo: number; hi: number }> = {
-  common:    { s: 0.003001,  e: 0.000406,  lo: 0,    hi: 250 },
-  uncommon:  { s: 0.001156,  e: 0.0001563, lo: 251,  hi: 500 },
-  rare:      { s: 4.624e-5,  e: 6.252e-6,  lo: 501,  hi: 2500 },
-  epic:      { s: 1.020e-5,  e: 1.379e-6,  lo: 2501, hi: 4200 },
-  legendary: { s: 6.609e-6,  e: 8.937e-7,  lo: 4201, hi: 4900 },
-  mythic:    { s: 1.156e-5,  e: 1.564e-6,  lo: 4901, hi: 5000 },
+//   unobtainable ≈ 0.0001% (≈ 1 in 1,000,000) — only n=0 or n=10000.
+const TIER_BASE: Record<
+  RarityKey,
+  { s: number; e: number; lo: number; hi: number }
+> = {
+  common: { s: 0.003001, e: 0.000406, lo: 0, hi: 250 },
+  uncommon: { s: 0.001156, e: 0.0001563, lo: 251, hi: 500 },
+  rare: { s: 4.624e-5, e: 6.252e-6, lo: 501, hi: 2500 },
+  epic: { s: 1.02e-5, e: 1.379e-6, lo: 2501, hi: 4200 },
+  legendary: { s: 6.609e-6, e: 8.937e-7, lo: 4201, hi: 4900 },
+  mythic: { s: 1.156e-5, e: 1.564e-6, lo: 4901, hi: 4999 },
+  // Unobtainable: just two numbers (0 and 10000). Single weight, ~1e-6 each.
+  unobtainable: { s: 1.0e-6, e: 1.0e-6, lo: 5000, hi: 5000 },
 };
 
 // `rarityTilt` ∈ [0, 2] multiplies the rarer tiers up so upgrades/boosters
@@ -44,10 +50,37 @@ function tierBoost(t: RarityKey, tilt: number): number {
       return 1 + tilt * 5;
     case "mythic":
       return 1 + tilt * 10;
+    case "unobtainable":
+      return 1 + tilt * 20;
   }
 }
 
-export function buildDistribution(rarityTilt: number): Distribution {
+// Special "cybernetic mode": when the Cybernetic Ultimate Dragon is equipped,
+// completely zero out common/uncommon/rare, dim epic, hugely boost legendary
+// and mythic, and double the unobtainable chance.
+function cyberneticBoost(t: RarityKey): number {
+  switch (t) {
+    case "common":
+      return 0;
+    case "uncommon":
+      return 0;
+    case "rare":
+      return 0;
+    case "epic":
+      return 0.05; // very rare
+    case "legendary":
+      return 30;
+    case "mythic":
+      return 80;
+    case "unobtainable":
+      return 200;
+  }
+}
+
+export function buildDistribution(
+  rarityTilt: number,
+  cybernetic = false,
+): Distribution {
   const tilt = Math.max(0, rarityTilt);
   const probs = new Float64Array(MAX_NUMBER + 1);
   const tmp = new Float64Array(MAX_NUMBER + 1);
@@ -60,7 +93,10 @@ export function buildDistribution(rarityTilt: number): Distribution {
     const span = Math.max(1, cfg.hi - cfg.lo);
     const t = Math.min(1, Math.max(0, (d - cfg.lo) / span));
     // exponential interpolation s -> e across the tier
-    const w = cfg.s * Math.pow(cfg.e / cfg.s, t) * tierBoost(tier, tilt);
+    const baseW = cfg.s * Math.pow(cfg.e / cfg.s, t);
+    const w = cybernetic
+      ? baseW * cyberneticBoost(tier)
+      : baseW * tierBoost(tier, tilt);
     tmp[n] = w;
     sum += w;
   }

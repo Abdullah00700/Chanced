@@ -1,4 +1,4 @@
-import type { LeaderEntry, Profile } from "./types";
+import type { LeaderEntry, PetInstance, Profile, RarityKey } from "./types";
 
 export const LS_ACCOUNTS = "rr2.accounts";
 export const LS_ACTIVE = "rr2.active";
@@ -7,13 +7,81 @@ export const LS_MUTED = "rr2.muted";
 
 export type AccountsMap = Record<string, Profile>;
 
+const RARITIES: RarityKey[] = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
+  "unobtainable",
+];
+
+/**
+ * Migrate older profiles into the current schema, filling missing fields with
+ * sensible defaults so old save codes / accounts keep working.
+ */
+function migrateProfile(raw: any): Profile {
+  const rollsByRarity = { ...(raw.rollsByRarity ?? {}) } as Record<
+    RarityKey,
+    number
+  >;
+  for (const r of RARITIES) {
+    if (typeof rollsByRarity[r] !== "number") rollsByRarity[r] = 0;
+  }
+  // Pet instances may have been { ownedAt: number } only — ensure { level }.
+  const pets: Record<string, PetInstance> = {};
+  for (const id of Object.keys(raw.pets ?? {})) {
+    const inst = raw.pets[id] ?? {};
+    pets[id] = {
+      ownedAt: typeof inst.ownedAt === "number" ? inst.ownedAt : Date.now(),
+      level: typeof inst.level === "number" && inst.level > 0 ? inst.level : 1,
+    };
+  }
+  return {
+    username: raw.username,
+    passwordHash: raw.passwordHash,
+    coins: raw.coins ?? 0,
+    gems: raw.gems ?? 0,
+    xp: raw.xp ?? 0,
+    level: raw.level ?? 1,
+    totalRolls: raw.totalRolls ?? 0,
+    rollsByRarity,
+    bestNumber: raw.bestNumber ?? null,
+    bestProb: raw.bestProb ?? null,
+    worstNumber: raw.worstNumber ?? null,
+    worstProb: raw.worstProb ?? null,
+    rarestNumber: raw.rarestNumber ?? null,
+    rarestProb: raw.rarestProb ?? null,
+    upgrades: { coin: raw.upgrades?.coin ?? 0, rarity: raw.upgrades?.rarity ?? 0 },
+    pets,
+    equippedPet: raw.equippedPet ?? null,
+    achievements: raw.achievements ?? {},
+    mythicStreak: raw.mythicStreak ?? 0,
+    boosters: {
+      coinUntil: raw.boosters?.coinUntil ?? 0,
+      rarityUntil: raw.boosters?.rarityUntil ?? 0,
+    },
+    createdAt: raw.createdAt ?? Date.now(),
+    schemaVersion: 3,
+  };
+}
+
 export function loadAccounts(): AccountsMap {
   try {
     const raw = localStorage.getItem(LS_ACCOUNTS);
     if (!raw) return {};
     const v = JSON.parse(raw);
     if (typeof v !== "object" || !v) return {};
-    return v as AccountsMap;
+    const out: AccountsMap = {};
+    for (const k of Object.keys(v)) {
+      try {
+        out[k] = migrateProfile(v[k]);
+      } catch {
+        // skip corrupt entry
+      }
+    }
+    return out;
   } catch {
     return {};
   }
@@ -55,7 +123,6 @@ export function upsertLeader(
   return next.slice(0, 50);
 }
 
-// SHA-256 hashing for password
 export async function sha256(input: string): Promise<string> {
   const data = new TextEncoder().encode(input);
   const buf = await crypto.subtle.digest("SHA-256", data);
@@ -83,6 +150,7 @@ export function emptyProfile(
       epic: 0,
       legendary: 0,
       mythic: 0,
+      unobtainable: 0,
     },
     bestNumber: null,
     bestProb: null,
@@ -94,8 +162,9 @@ export function emptyProfile(
     pets: {},
     equippedPet: null,
     achievements: {},
+    mythicStreak: 0,
     boosters: { coinUntil: 0, rarityUntil: 0 },
     createdAt: Date.now(),
-    schemaVersion: 2,
+    schemaVersion: 3,
   };
 }

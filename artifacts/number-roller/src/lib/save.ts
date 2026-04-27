@@ -1,6 +1,38 @@
-import type { Profile } from "./types";
+import type { Profile, RarityKey } from "./types";
 
 const PREFIX = "RR2-";
+
+const RARITY_KEYS: RarityKey[] = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
+  "unobtainable",
+];
+
+function migrateLoaded(raw: any): Profile {
+  const rollsByRarity = { ...(raw.rollsByRarity ?? {}) };
+  for (const k of RARITY_KEYS) {
+    if (typeof rollsByRarity[k] !== "number") rollsByRarity[k] = 0;
+  }
+  const pets: Record<string, { ownedAt: number; level: number }> = {};
+  for (const id of Object.keys(raw.pets ?? {})) {
+    const inst = raw.pets[id] ?? {};
+    pets[id] = {
+      ownedAt: typeof inst.ownedAt === "number" ? inst.ownedAt : Date.now(),
+      level: typeof inst.level === "number" && inst.level > 0 ? inst.level : 1,
+    };
+  }
+  return {
+    ...raw,
+    rollsByRarity,
+    pets,
+    mythicStreak: raw.mythicStreak ?? 0,
+    schemaVersion: 3,
+  };
+}
 
 export function encodeSave(profile: Profile): string {
   const json = JSON.stringify(profile);
@@ -21,7 +53,7 @@ export function decodeSave(code: string): Profile | null {
     ) {
       return null;
     }
-    return parsed as Profile;
+    return migrateLoaded(parsed) as Profile;
   } catch {
     return null;
   }

@@ -12,6 +12,7 @@ const PAGE_ITEMS: MenuItem[] = [
   { key: "roll", label: "Roll", icon: "◎", hint: "Spin the curve" },
   { key: "shop", label: "Shop", icon: "▲", hint: "Upgrades & boosters" },
   { key: "pets", label: "Pets", icon: "✦", hint: "Collect & equip" },
+  { key: "pets", label: "Inventory", icon: "▢", hint: "Your owned pets" },
   { key: "achievements", label: "Achievements", icon: "★", hint: "Trophies" },
   { key: "leaderboard", label: "Leaderboard", icon: "≡", hint: "Rarest rolls" },
 ];
@@ -83,10 +84,10 @@ export function MenuDrawer({
             Pages
           </div>
           <ul className="flex flex-col gap-1.5">
-            {PAGE_ITEMS.map((item) => {
+            {PAGE_ITEMS.map((item, idx) => {
               const isActive = item.key === active;
               return (
-                <li key={item.key}>
+                <li key={`${item.key}-${idx}`}>
                   <button
                     onClick={() => {
                       onChangeTab(item.key);

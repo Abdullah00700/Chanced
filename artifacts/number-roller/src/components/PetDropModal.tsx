@@ -1,4 +1,5 @@
 import { Modal } from "./Modal";
+import { PetArt } from "./PetArt";
 import { PET_BY_ID } from "../lib/pets";
 import { isGradientRarity, RARITY_BY_KEY } from "../lib/rarity";
 
@@ -13,7 +14,7 @@ export function PetDropModal({
 }) {
   const pet = PET_BY_ID[petId];
   if (!pet) return null;
-  const r = RARITY_BY_KEY[pet.rarity];
+  const r = RARITY_BY_KEY[pet.baseRarity];
 
   return (
     <Modal onClose={onClose} size="sm">
@@ -31,19 +32,14 @@ export function PetDropModal({
           {pet.name}
         </h2>
         <div
-          className="mx-auto mt-3 flex h-20 w-20 items-center justify-center rounded-2xl border"
+          className="mx-auto mt-3 flex h-24 w-24 items-center justify-center rounded-2xl border"
           style={{
             background: r.badgeBg,
             borderColor: "rgba(255,255,255,0.06)",
             boxShadow: r.glow,
           }}
         >
-          <span
-            className="text-3xl font-black"
-            style={{ color: r.badgeText, textShadow: r.glow }}
-          >
-            {pet.glyph}
-          </span>
+          <PetArt art={pet.art} size={80} />
         </div>
         <div className="mt-2 text-[11px] text-zinc-400">{pet.flavor}</div>
         <div className="mt-3 grid grid-cols-2 gap-2">

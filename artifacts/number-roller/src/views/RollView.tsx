@@ -10,6 +10,9 @@ import {
 } from "../lib/rarity";
 import type { Profile, RollResult } from "../lib/types";
 
+const REEL_DIGIT_HEIGHT = 64; // px per digit in the reel strip
+const REEL_STAGGER_MS = 140;
+
 export function RollView({
   profile,
   rolling,
@@ -17,6 +20,7 @@ export function RollView({
   lastResult,
   onRoll,
   rollSpeedMult,
+  rollStartKey,
   now,
 }: {
   profile: Profile;
@@ -25,6 +29,8 @@ export function RollView({
   lastResult: RollResult | null;
   onRoll: () => void;
   rollSpeedMult: number;
+  /** Increments each time a new roll begins — used to clear floats. */
+  rollStartKey: number;
   now: number;
 }) {
   const lastRarity: RarityDef | null = lastResult
@@ -42,6 +48,8 @@ export function RollView({
   const isGradient = lastRarity ? isGradientRarity(lastRarity.key) : false;
   const showCenter = rolling || lastResult != null;
 
+  // Floats: append on each new lastResult, but CLEAR them whenever a fresh
+  // roll starts (rollStartKey bumps).
   const [floats, setFloats] = useState<
     {
       id: number;
@@ -50,6 +58,11 @@ export function RollView({
     }[]
   >([]);
   const idRef = useRef(0);
+
+  useEffect(() => {
+    setFloats([]);
+  }, [rollStartKey]);
+
   useEffect(() => {
     if (!lastResult) return;
     const id = ++idRef.current;
@@ -59,10 +72,18 @@ export function RollView({
     ]);
     const t = setTimeout(
       () => setFloats((f) => f.filter((x) => x.id !== id)),
-      1400,
+      1800,
     );
     return () => clearTimeout(t);
   }, [lastResult]);
+
+  // 5-digit slot reel target
+  const targetNumber = lastResult?.number ?? displayNumber;
+  const padded = String(Math.max(0, Math.min(99999, targetNumber))).padStart(
+    5,
+    "0",
+  );
+  const targetDigits = padded.split("").map((d) => parseInt(d, 10));
 
   return (
     <div className="flex flex-col gap-3 pb-4">
@@ -72,7 +93,6 @@ export function RollView({
         now={now}
       />
 
-      {/* Stats grid moved ABOVE the roll panel per user request */}
       <div className="grid grid-cols-3 gap-2">
         <StatCard
           label="Closest"
@@ -95,7 +115,7 @@ export function RollView({
       </div>
 
       {/* Roll display panel */}
-      <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900/90 to-zinc-950/95 p-6 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900/90 to-zinc-950/95 p-5 shadow-2xl">
         <div
           className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-500"
           style={{
@@ -104,7 +124,7 @@ export function RollView({
               : "transparent",
           }}
         />
-        <div className="relative flex min-h-[180px] flex-col items-center justify-center">
+        <div className="relative flex min-h-[200px] flex-col items-center justify-center">
           {!showCenter ? (
             <div className="text-center">
               <div className="text-5xl font-extrabold text-zinc-700">?</div>
@@ -114,23 +134,23 @@ export function RollView({
             </div>
           ) : (
             <>
-              <div
-                className={
-                  "text-center text-7xl font-black tabular-nums leading-none " +
-                  (isGradient ? "gradient-text" : "")
-                }
-                style={{
-                  ...(lastRarity?.textStyle ?? { color: "#e5e7eb" }),
-                  textShadow: rolling
-                    ? "0 0 12px rgba(255,255,255,0.4)"
-                    : (lastRarity?.glow ?? "none"),
-                  animation: rolling
-                    ? `flicker ${Math.max(80, 180 * rollSpeedMult)}ms ease-in-out infinite`
-                    : "none",
-                }}
-              >
-                {displayNumber.toLocaleString()}
+              {/* Slot machine reels */}
+              <div className="flex items-center justify-center gap-1.5">
+                {targetDigits.map((d, i) => (
+                  <SlotReel
+                    key={i}
+                    targetDigit={d}
+                    spinning={rolling}
+                    stopDelayMs={i * REEL_STAGGER_MS}
+                    rollSpeedMult={rollSpeedMult}
+                    rollStartKey={rollStartKey}
+                    color={lastRarity?.textStyle ?? { color: "#e5e7eb" }}
+                    isGradient={isGradient}
+                    glow={lastRarity?.glow}
+                  />
+                ))}
               </div>
+
               {!rolling && lastResult && lastRarity && (
                 <div className="mt-3 flex flex-col items-center gap-1.5 fade-in">
                   <span
@@ -159,7 +179,7 @@ export function RollView({
                 style={{
                   bottom: 8,
                   transform: `translateY(${-i * 18}px)`,
-                  animation: "floatUp 1.2s ease-out forwards",
+                  animation: "floatUp 1.6s ease-out forwards",
                 }}
               >
                 <span className="mr-2 text-amber-300">
@@ -172,7 +192,6 @@ export function RollView({
         </div>
       </div>
 
-      {/* ROLL button moved BELOW the panel per user request */}
       <button
         onClick={onRoll}
         disabled={rolling}
@@ -226,6 +245,95 @@ export function RollView({
           <span className="font-mono text-zinc-300">{profile.totalRolls}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * One vertical slot reel. While `spinning`, the strip translates upward
+ * continuously. When `spinning` becomes false, the reel snaps to the
+ * `targetDigit` after `stopDelayMs` so reels stop left-to-right.
+ */
+function SlotReel({
+  targetDigit,
+  spinning,
+  stopDelayMs,
+  rollSpeedMult,
+  rollStartKey,
+  color,
+  isGradient,
+  glow,
+}: {
+  targetDigit: number;
+  spinning: boolean;
+  stopDelayMs: number;
+  rollSpeedMult: number;
+  rollStartKey: number;
+  color: React.CSSProperties;
+  isGradient: boolean;
+  glow?: string;
+}) {
+  const [stopped, setStopped] = useState(!spinning);
+
+  useEffect(() => {
+    if (spinning) {
+      setStopped(false);
+      return;
+    }
+    const t = setTimeout(() => setStopped(true), stopDelayMs);
+    return () => clearTimeout(t);
+  }, [spinning, stopDelayMs, rollStartKey]);
+
+  // 0–9 repeated twice for seamless animation loop.
+  const strip = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+  ];
+
+  const spinDuration = Math.max(0.18, 0.32 * rollSpeedMult);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-md border border-zinc-700/70 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 shadow-inner"
+      style={{
+        width: 46,
+        height: REEL_DIGIT_HEIGHT,
+      }}
+    >
+      {/* Top/bottom gradient masks */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-3 bg-gradient-to-b from-zinc-950 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-3 bg-gradient-to-t from-zinc-950 to-transparent" />
+
+      {stopped ? (
+        <div
+          className={
+            "flex h-full w-full items-center justify-center text-5xl font-black tabular-nums " +
+            (isGradient ? "gradient-text" : "")
+          }
+          style={{
+            ...color,
+            textShadow: glow ?? "none",
+          }}
+        >
+          {targetDigit}
+        </div>
+      ) : (
+        <div
+          className="flex flex-col items-center"
+          style={{
+            animation: `slotSpin ${spinDuration}s linear infinite`,
+          }}
+        >
+          {strip.map((d, i) => (
+            <div
+              key={i}
+              className="flex shrink-0 items-center justify-center text-5xl font-black tabular-nums text-zinc-300"
+              style={{ height: REEL_DIGIT_HEIGHT }}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

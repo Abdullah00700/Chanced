@@ -16,12 +16,13 @@ export type RarityDef = {
 // `threshold` is the minimum |n - CENTER| / CENTER (extremeness) at which
 // this tier begins. We pick the tier with the largest threshold ≤ extremeness.
 // Bands by absolute number range:
-//   common:    4750–5250        (d in [0, 250])
-//   uncommon:  4500–4749 / 5251–5500   (d in [251, 500])
-//   rare:      2500–4499 / 5501–7500   (d in [501, 2500])
-//   epic:      800–2499  / 7501–9200   (d in [2501, 4200])
-//   legendary: 100–799   / 9201–9900   (d in [4201, 4900])
-//   mythic:    0–99      / 9901–10000  (d in [4901, 5000])
+//   common:        4750–5250        (d in [0, 250])
+//   uncommon:      4500–4749 / 5251–5500   (d in [251, 500])
+//   rare:          2500–4499 / 5501–7500   (d in [501, 2500])
+//   epic:          800–2499  / 7501–9200   (d in [2501, 4200])
+//   legendary:     100–799   / 9201–9900   (d in [4201, 4900])
+//   mythic:        1–99      / 9901–9999   (d in [4901, 4999])
+//   unobtainable:  0  /  10000             (d == 5000)
 export const RARITIES: RarityDef[] = [
   {
     key: "common",
@@ -67,7 +68,8 @@ export const RARITIES: RarityDef[] = [
       backgroundImage: "linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%)",
     },
     glow: "0 0 18px rgba(59,130,246,0.85), 0 0 48px rgba(30,58,138,0.6)",
-    badgeBg: "linear-gradient(90deg, rgba(59,130,246,0.25), rgba(30,58,138,0.25))",
+    badgeBg:
+      "linear-gradient(90deg, rgba(59,130,246,0.25), rgba(30,58,138,0.25))",
     badgeText: "#93c5fd",
     auraColor: "rgba(59,130,246,0.7)",
     baseCoins: 120,
@@ -81,7 +83,8 @@ export const RARITIES: RarityDef[] = [
       backgroundImage: "linear-gradient(90deg, #facc15 0%, #f97316 100%)",
     },
     glow: "0 0 22px rgba(250,204,21,0.85), 0 0 60px rgba(249,115,22,0.6)",
-    badgeBg: "linear-gradient(90deg, rgba(250,204,21,0.25), rgba(249,115,22,0.25))",
+    badgeBg:
+      "linear-gradient(90deg, rgba(250,204,21,0.25), rgba(249,115,22,0.25))",
     badgeText: "#fbbf24",
     auraColor: "rgba(249,115,22,0.8)",
     baseCoins: 800,
@@ -94,12 +97,30 @@ export const RARITIES: RarityDef[] = [
     textStyle: {
       backgroundImage: "linear-gradient(90deg, #000000 0%, #4c1d95 100%)",
     },
-    glow: "0 0 24px rgba(76,29,149,0.95), 0 0 70px rgba(124,58,237,0.65), 0 0 12px rgba(0,0,0,0.9)",
+    glow:
+      "0 0 24px rgba(76,29,149,0.95), 0 0 70px rgba(124,58,237,0.65), 0 0 12px rgba(0,0,0,0.9)",
     badgeBg: "linear-gradient(90deg, rgba(0,0,0,0.6), rgba(76,29,149,0.45))",
     badgeText: "#c4b5fd",
     auraColor: "rgba(139,92,246,0.85)",
     baseCoins: 8000,
     baseXp: 3000,
+  },
+  {
+    key: "unobtainable",
+    label: "UNOBTAINABLE",
+    threshold: 1, // d/CENTER === 1, i.e. n is exactly 0 or 10000
+    textStyle: {
+      backgroundImage:
+        "linear-gradient(90deg, #f43f5e 0%, #f59e0b 25%, #facc15 50%, #22d3ee 75%, #a855f7 100%)",
+    },
+    glow:
+      "0 0 30px rgba(244,63,94,0.9), 0 0 60px rgba(168,85,247,0.7), 0 0 90px rgba(34,211,238,0.5)",
+    badgeBg:
+      "linear-gradient(90deg, rgba(244,63,94,0.35), rgba(168,85,247,0.35), rgba(34,211,238,0.35))",
+    badgeText: "#fff",
+    auraColor: "rgba(244,63,94,0.9)",
+    baseCoins: 250000,
+    baseXp: 100000,
   },
 ];
 
@@ -113,6 +134,17 @@ export const RARITY_BY_KEY: Record<RarityKey, RarityDef> = RARITIES.reduce(
 
 export const CENTER = 5000;
 export const MAX_NUMBER = 10000;
+
+// Numeric rank for sorting (common = 0, unobtainable = 6).
+export const RARITY_RANK: Record<RarityKey, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
+  mythic: 5,
+  unobtainable: 6,
+};
 
 export function extremeness(n: number) {
   return Math.abs(n - CENTER) / CENTER;
@@ -128,5 +160,10 @@ export function rarityFor(n: number): RarityDef {
 }
 
 export function isGradientRarity(key: RarityKey): boolean {
-  return key === "epic" || key === "legendary" || key === "mythic";
+  return (
+    key === "epic" ||
+    key === "legendary" ||
+    key === "mythic" ||
+    key === "unobtainable"
+  );
 }

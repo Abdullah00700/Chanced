@@ -19,7 +19,13 @@ import {
   rarityTiltFromLevel,
   xpMultFromLevel,
 } from "./lib/level";
-import { PET_BY_ID, rollPetDrop } from "./lib/pets";
+import {
+  effectiveEffect,
+  isPetMaxed,
+  PET_BY_ID,
+  petUpgradeCost,
+  rollPetDrop,
+} from "./lib/pets";
 import { CENTER, MAX_NUMBER, RARITY_BY_KEY, rarityFor } from "./lib/rarity";
 import {
   COIN_BOOSTER_COST,
@@ -49,17 +55,17 @@ import {
   playPetDrop,
   playPurchase,
   playRarity,
-  playRollClick,
+  playRollTick,
   setMuted,
 } from "./lib/sounds";
-import type { LeaderEntry, Profile } from "./lib/types";
+import type { LeaderEntry, PetInstance, Profile, RarityKey } from "./lib/types";
 import { AchievementsView } from "./views/AchievementsView";
 import { LeaderboardView } from "./views/LeaderboardView";
 import { PetsView } from "./views/PetsView";
 import { RollView } from "./views/RollView";
 import { ShopView } from "./views/ShopView";
 
-const ROLL_BASE_DURATION_MS = 800;
+const ROLL_BASE_DURATION_MS = 1100;
 const ROLL_TICK_MS = 70;
 
 export default function App() {
@@ -79,7 +85,6 @@ export default function App() {
     setMuted(muted);
     localStorage.setItem(LS_MUTED, muted ? "1" : "0");
   }, [muted]);
-  // sync helper
   void isMuted;
 
   // ---- Leaderboard ----
@@ -117,6 +122,7 @@ export default function App() {
   >(null);
   const [auraColor, setAuraColor] = useState<string | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
+  const [rollStartKey, setRollStartKey] = useState(0);
   const [showSave, setShowSave] = useState(false);
   const [showWipe, setShowWipe] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,27 +136,34 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
+  // Currently equipped pet — including its current per-level effective effect.
+  const equippedEffect = useMemo(() => {
+    if (!profile?.equippedPet) return null;
+    const def = PET_BY_ID[profile.equippedPet];
+    const inst = profile.pets[profile.equippedPet];
+    if (!def || !inst) return null;
+    return { def, inst, eff: effectiveEffect(def, inst.level) };
+  }, [profile]);
+
+  const cyberneticActive =
+    equippedEffect?.def.id === "cybernetic-dragon";
+
   // ---- Distribution ----
   const distTilt = useMemo(() => {
     if (!profile) return 0;
     const fromUpgrade = rarityUpgradeTilt(profile.upgrades.rarity);
     const fromLevel = rarityTiltFromLevel(profile.level);
-    const fromBooster =
-      profile.boosters.rarityUntil > now ? 0.4 : 0;
-    const equipped = profile.equippedPet
-      ? PET_BY_ID[profile.equippedPet]
-      : null;
-    const fromPet = equipped?.effect.rarityTilt ?? 0;
+    const fromBooster = profile.boosters.rarityUntil > now ? 0.4 : 0;
+    const fromPet = equippedEffect?.eff.rarityTilt ?? 0;
     return Math.min(2, fromUpgrade + fromLevel + fromBooster + fromPet);
-  }, [profile, now]);
+  }, [profile, now, equippedEffect]);
 
-  const dist = useMemo(() => buildDistribution(distTilt), [distTilt]);
+  const dist = useMemo(
+    () => buildDistribution(distTilt, cyberneticActive),
+    [distTilt, cyberneticActive],
+  );
 
-  const rollSpeedMult = useMemo(() => {
-    if (!profile?.equippedPet) return 1;
-    const pet = PET_BY_ID[profile.equippedPet];
-    return pet?.effect.rollSpeedMult ?? 1;
-  }, [profile]);
+  const rollSpeedMult = equippedEffect?.eff.rollSpeedMult ?? 1;
 
   // ---- Roll logic ----
   const rollAbortRef = useRef(0);
@@ -165,9 +178,10 @@ export default function App() {
     setRolling(true);
     setLastResult(null);
     setAuraColor(null);
+    setRollStartKey((k) => k + 1);
 
     const tickMs = Math.max(40, ROLL_TICK_MS * rollSpeedMult);
-    const totalMs = Math.max(300, ROLL_BASE_DURATION_MS * rollSpeedMult);
+    const totalMs = Math.max(420, ROLL_BASE_DURATION_MS * rollSpeedMult);
     const start = performance.now();
 
     const tick = () => {
@@ -182,7 +196,7 @@ export default function App() {
           MAX_NUMBER,
         );
         setDisplayNumber(fake);
-        playRollClick();
+        playRollTick();
         setTimeout(tick, tickMs);
       } else {
         finalize(target);
@@ -196,7 +210,7 @@ export default function App() {
       const result = produceRollResult(n, dist.probs[n], profile!, now);
       setRolling(false);
 
-      // Maybe drop a pet
+      // Maybe drop a pet (normal tier drop, never unobtainable)
       const tier = result.rarity;
       const tierProb = sumTierProb(dist.probs, tier);
       const ownedSet = new Set(Object.keys(profile!.pets));
@@ -208,21 +222,24 @@ export default function App() {
         : null;
       result.petDropped = droppedPet;
 
+      let nextMythicStreak = profile!.mythicStreak ?? 0;
+      if (result.rarity === "mythic") nextMythicStreak += 1;
+      else if (result.rarity !== "unobtainable") nextMythicStreak = 0;
+
       // Apply to profile
       updateProfile((p) => {
-        // Add coins/xp/rolls
         p.coins += result.coinsEarned;
         p.totalRolls += 1;
         p.rollsByRarity = {
           ...p.rollsByRarity,
           [result.rarity]: p.rollsByRarity[result.rarity] + 1,
         };
+        p.mythicStreak = nextMythicStreak;
         const lv = applyXpGain(p.level, p.xp, result.xpEarned);
         p.level = lv.level;
         p.xp = lv.xpInLevel;
         if (lv.leveledUp > 0) playLevelUp();
 
-        // Update best/worst/rarest
         const distFromCenter = Math.abs(n - CENTER);
         if (
           p.bestNumber == null ||
@@ -243,22 +260,22 @@ export default function App() {
           p.rarestProb = result.prob;
         }
 
-        // Pet drop
         if (droppedPet) {
           p.pets = {
             ...p.pets,
-            [droppedPet]: { ownedAt: Date.now() },
+            [droppedPet]: { ownedAt: Date.now(), level: 1 },
           };
         }
         return p;
       });
 
-      // Achievements check
+      // Achievements check (passing roll context AND mythic streak)
       checkAndAwardAchievements({
         lastRoll: { number: n, rarity: result.rarity },
+        mythicStreak: nextMythicStreak,
       });
 
-      // Leaderboard if rare enough
+      // Leaderboard
       if (result.prob < 0.001) {
         setLeaderboard((lb) =>
           upsertLeader(lb, {
@@ -289,21 +306,29 @@ export default function App() {
 
   // ---- Achievement check ----
   function checkAndAwardAchievements(ctx: {
-    lastRoll: { number: number; rarity: import("./lib/types").RarityKey } | null;
+    lastRoll: { number: number; rarity: RarityKey } | null;
+    mythicStreak?: number;
   }) {
     if (!activeUser) return;
     const cur = accounts[activeUser];
     if (!cur) return;
     let next = { ...cur };
     const justAwarded: typeof ACHIEVEMENTS = [];
+    const grantedPets: string[] = [];
     for (const a of ACHIEVEMENTS) {
       if (next.achievements[a.id]) continue;
       if (a.check(next, ctx)) {
+        const newPets = { ...next.pets };
+        if (a.reward.petId && !newPets[a.reward.petId]) {
+          newPets[a.reward.petId] = { ownedAt: Date.now(), level: 1 };
+          grantedPets.push(a.reward.petId);
+        }
         next = {
           ...next,
           achievements: { ...next.achievements, [a.id]: Date.now() },
           coins: next.coins + a.reward.coins,
           gems: next.gems + a.reward.gems,
+          pets: newPets,
         };
         if (a.reward.xp > 0) {
           const lv = applyXpGain(next.level, next.xp, a.reward.xp);
@@ -317,12 +342,10 @@ export default function App() {
       playAchievement();
       const map = { ...accounts, [activeUser]: next };
       persistAccounts(map);
-      // Push a toast for each newly-unlocked achievement, slightly staggered.
       setToasts((prev) => {
         const queue = [...prev];
         justAwarded.forEach((a, i) => {
           const id = ++toastIdRef.current;
-          // Stagger by adding a tiny delay through setTimeout for visual effect.
           if (i === 0) {
             queue.push({ id, achievement: a });
           } else {
@@ -333,6 +356,14 @@ export default function App() {
         });
         return queue;
       });
+      // If we granted a special pet from an achievement, show the drop modal
+      // (after the toast has appeared).
+      if (grantedPets.length > 0) {
+        setTimeout(() => {
+          playPetDrop();
+          setPetDropId(grantedPets[0]);
+        }, 900);
+      }
     }
   }
 
@@ -397,11 +428,66 @@ export default function App() {
     const pet = PET_BY_ID[id];
     if (!profile || !pet) return;
     if (profile.pets[id]) return;
+    if (pet.baseRarity === "unobtainable") return;
     if (profile.coins < pet.costCoins || profile.gems < pet.costGems) return;
     updateProfile((p) => {
       p.coins -= pet.costCoins;
       p.gems -= pet.costGems;
-      p.pets = { ...p.pets, [id]: { ownedAt: Date.now() } };
+      p.pets = { ...p.pets, [id]: { ownedAt: Date.now(), level: 1 } };
+      return p;
+    });
+    playPurchase();
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+  function upgradePet(id: string) {
+    if (!profile) return;
+    const def = PET_BY_ID[id];
+    const inst = profile.pets[id];
+    if (!def || !inst) return;
+    if (def.baseRarity === "unobtainable") return;
+    if (isPetMaxed(def, inst.level)) return;
+    const cost = petUpgradeCost(def, inst.level);
+    if (profile.coins < cost) return;
+
+    // Block tier-evolution if player level too low.
+    const NORMAL_TIERS: RarityKey[] = [
+      "common",
+      "uncommon",
+      "rare",
+      "epic",
+      "legendary",
+      "mythic",
+    ];
+    const TIER_LEVEL_START: Record<string, number> = {
+      common: 1,
+      uncommon: 11,
+      rare: 21,
+      epic: 31,
+      legendary: 41,
+      mythic: 51,
+    };
+    const nextLevel = inst.level + 1;
+    // What tier will the next level land in?
+    const nextTier = NORMAL_TIERS.find(
+      (t, idx) =>
+        nextLevel >= TIER_LEVEL_START[t] &&
+        (idx === NORMAL_TIERS.length - 1 ||
+          nextLevel < TIER_LEVEL_START[NORMAL_TIERS[idx + 1]]),
+    );
+    if (nextTier) {
+      const tierIdx = NORMAL_TIERS.indexOf(nextTier);
+      const playerNeeded = tierIdx * 10; // uncommon needs 10, rare needs 20, etc.
+      if (profile.level < playerNeeded) return;
+    }
+
+    updateProfile((p) => {
+      p.coins -= cost;
+      const ex = p.pets[id];
+      const newInst: PetInstance = {
+        ownedAt: ex?.ownedAt ?? Date.now(),
+        level: nextLevel,
+      };
+      p.pets = { ...p.pets, [id]: newInst };
       return p;
     });
     playPurchase();
@@ -493,6 +579,7 @@ export default function App() {
           lastResult={lastResult}
           onRoll={doRoll}
           rollSpeedMult={rollSpeedMult}
+          rollStartKey={rollStartKey}
           now={now}
         />
       )}
@@ -507,7 +594,12 @@ export default function App() {
         />
       )}
       {tab === "pets" && (
-        <PetsView profile={profile} onEquip={equipPet} onBuyPet={buyPet} />
+        <PetsView
+          profile={profile}
+          onEquip={equipPet}
+          onBuyPet={buyPet}
+          onUpgradePet={upgradePet}
+        />
       )}
       {tab === "achievements" && <AchievementsView profile={profile} />}
       {tab === "leaderboard" && (
@@ -555,10 +647,7 @@ function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
 }
 
-function sumTierProb(
-  probs: Float64Array,
-  tier: import("./lib/types").RarityKey,
-): number {
+function sumTierProb(probs: Float64Array, tier: RarityKey): number {
   let total = 0;
   for (let n = 0; n <= MAX_NUMBER; n++) {
     if (rarityFor(n).key === tier) total += probs[n];
@@ -573,20 +662,28 @@ function produceRollResult(
   now: number,
 ) {
   const r = rarityFor(n);
-  const equipped = profile.equippedPet ? PET_BY_ID[profile.equippedPet] : null;
+  let petCoinMult = 1;
+  let petXpMult = 1;
+  if (profile.equippedPet) {
+    const def = PET_BY_ID[profile.equippedPet];
+    const inst = profile.pets[profile.equippedPet];
+    if (def && inst) {
+      const eff = effectiveEffect(def, inst.level);
+      petCoinMult = eff.coinMult;
+      petXpMult = eff.xpMult;
+    }
+  }
   const baseCoins = r.baseCoins;
   const baseXp = r.baseXp;
 
   const upgradeCoinMult = coinUpgradeMult(profile.upgrades.coin);
   const levelCoinMult = coinMultFromLevel(profile.level);
-  const petCoinMult = equipped?.effect.coinMult ?? 1;
   const boosterCoinMult =
     profile.boosters.coinUntil > now ? COIN_BOOSTER_MULT : 1;
   const coinMult =
     upgradeCoinMult * levelCoinMult * petCoinMult * boosterCoinMult;
 
   const levelXpMult = xpMultFromLevel(profile.level);
-  const petXpMult = equipped?.effect.xpMult ?? 1;
   const xpMult = levelXpMult * petXpMult;
 
   return {

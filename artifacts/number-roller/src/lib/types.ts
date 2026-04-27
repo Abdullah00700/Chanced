@@ -4,7 +4,13 @@ export type RarityKey =
   | "rare"
   | "epic"
   | "legendary"
-  | "mythic";
+  | "mythic"
+  | "unobtainable";
+
+export type PetInstance = {
+  ownedAt: number;
+  level: number;
+};
 
 export type Profile = {
   username: string;
@@ -26,9 +32,12 @@ export type Profile = {
   rarestProb: number | null;
 
   upgrades: { coin: number; rarity: number };
-  pets: Record<string, { ownedAt: number }>;
+  pets: Record<string, PetInstance>;
   equippedPet: string | null;
   achievements: Record<string, number>;
+
+  // Tracks consecutive mythic rolls for the special achievement.
+  mythicStreak: number;
 
   boosters: {
     coinUntil: number;
@@ -36,7 +45,7 @@ export type Profile = {
   };
 
   createdAt: number;
-  schemaVersion: 2;
+  schemaVersion: 3;
 };
 
 export type LeaderEntry = {

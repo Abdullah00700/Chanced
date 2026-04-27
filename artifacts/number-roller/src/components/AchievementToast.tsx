@@ -7,8 +7,8 @@ export type ToastItem = {
   achievement: Achievement;
 };
 
-const SHOW_MS = 4200;
-const SLIDE_MS = 320;
+const SHOW_MS = 6500;
+const SLIDE_MS = 700;
 
 export function AchievementToastStack({
   toasts,
@@ -53,7 +53,7 @@ function Toast({
   return (
     <div
       className={
-        "pointer-events-auto w-full max-w-sm transition-all duration-300 ease-out " +
+        "pointer-events-auto w-full max-w-sm transition-all duration-700 ease-out " +
         translate
       }
     >

@@ -77,6 +77,27 @@ export function playRollClick() {
   osc.stop(now + 0.1);
 }
 
+/**
+ * Sharp slot-machine "tick" — short high click used while reels are spinning.
+ */
+export function playRollTick() {
+  if (muted) return;
+  const c = getCtx();
+  if (!c) return;
+  const now = c.currentTime;
+  const osc = c.createOscillator();
+  const gain = c.createGain();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(2200, now);
+  osc.frequency.exponentialRampToValueAtTime(1100, now + 0.025);
+  gain.gain.setValueAtTime(0.03, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+  osc.connect(gain);
+  gain.connect(c.destination);
+  osc.start();
+  osc.stop(now + 0.05);
+}
+
 export function playRarity(key: RarityKey) {
   switch (key) {
     case "common":
