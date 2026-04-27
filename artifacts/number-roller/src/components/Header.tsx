@@ -20,24 +20,29 @@ export function Header({
     <header className="sticky top-0 z-30 -mx-3 mb-3 border-b border-zinc-800/80 bg-[#0d0e14]/85 px-3 pb-2 pt-3 backdrop-blur-md">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-base font-extrabold tracking-tight text-white">
-              {profile.username}
-            </h1>
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-              LV {profile.level}
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-2">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-[width] duration-500"
-                style={{ width: pct + "%" }}
-              />
+          <h1 className="truncate text-base font-extrabold tracking-tight text-white">
+            {profile.username}
+          </h1>
+          {/* Level bar: fills based on XP%, level number centered inside */}
+          <div
+            className="relative mt-1.5 h-6 w-full overflow-hidden rounded-full border border-amber-500/30 bg-zinc-900/70"
+            aria-label={`Level ${profile.level}, ${Math.floor(pct)}% to next`}
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-orange-500 transition-[width] duration-500"
+              style={{
+                width: pct + "%",
+                boxShadow: "0 0 12px rgba(251,146,60,0.45)",
+              }}
+            />
+            <div className="relative z-10 flex h-full items-center justify-between px-2.5 text-[10px] font-bold tabular-nums">
+              <span className="text-amber-100/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)]">
+                LV {profile.level}
+              </span>
+              <span className="text-amber-50/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)]">
+                {formatCompact(profile.xp)} / {formatCompact(need)}
+              </span>
             </div>
-            <span className="shrink-0 text-[10px] tabular-nums text-zinc-500">
-              {formatCompact(profile.xp)}/{formatCompact(need)}
-            </span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -73,8 +78,11 @@ export function Header({
 
       <div className="mt-2 grid grid-cols-2 gap-2">
         <div className="flex items-center justify-between rounded-md border border-amber-500/20 bg-amber-500/5 px-2 py-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-300/80">
-            COINS
+          <span className="flex items-center gap-1.5">
+            <CoinIcon />
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-amber-300/80">
+              COINS
+            </span>
           </span>
           <span className="font-mono text-sm font-bold text-amber-300">
             {profile.coins.toLocaleString()}
@@ -90,5 +98,53 @@ export function Header({
         </div>
       </div>
     </header>
+  );
+}
+
+function CoinIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      aria-hidden
+      className="drop-shadow-[0_0_4px_rgba(251,191,36,0.6)]"
+    >
+      <defs>
+        <radialGradient id="coinGrad" cx="35%" cy="30%" r="80%">
+          <stop offset="0%" stopColor="#fde68a" />
+          <stop offset="55%" stopColor="#facc15" />
+          <stop offset="100%" stopColor="#b45309" />
+        </radialGradient>
+      </defs>
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        fill="url(#coinGrad)"
+        stroke="#78350f"
+        strokeWidth="1"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="7"
+        fill="none"
+        stroke="#78350f"
+        strokeWidth="0.8"
+        opacity="0.5"
+      />
+      <text
+        x="12"
+        y="16"
+        textAnchor="middle"
+        fontSize="10"
+        fontWeight="900"
+        fill="#78350f"
+        fontFamily="Inter, system-ui, sans-serif"
+      >
+        ¢
+      </text>
+    </svg>
   );
 }
