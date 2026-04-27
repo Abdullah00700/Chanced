@@ -13,6 +13,15 @@ export type RarityDef = {
   baseXp: number;
 };
 
+// `threshold` is the minimum |n - CENTER| / CENTER (extremeness) at which
+// this tier begins. We pick the tier with the largest threshold ≤ extremeness.
+// Bands by absolute number range:
+//   common:    4750–5250        (d in [0, 250])
+//   uncommon:  4500–4749 / 5251–5500   (d in [251, 500])
+//   rare:      2500–4499 / 5501–7500   (d in [501, 2500])
+//   epic:      800–2499  / 7501–9200   (d in [2501, 4200])
+//   legendary: 100–799   / 9201–9900   (d in [4201, 4900])
+//   mythic:    0–99      / 9901–10000  (d in [4901, 5000])
 export const RARITIES: RarityDef[] = [
   {
     key: "common",
@@ -29,7 +38,7 @@ export const RARITIES: RarityDef[] = [
   {
     key: "uncommon",
     label: "UNCOMMON",
-    threshold: 0.5,
+    threshold: 251 / 5000,
     textStyle: { color: "#22c55e" },
     glow: "0 0 14px rgba(34,197,94,0.7), 0 0 36px rgba(34,197,94,0.45)",
     badgeBg: "rgba(34,197,94,0.14)",
@@ -41,7 +50,7 @@ export const RARITIES: RarityDef[] = [
   {
     key: "rare",
     label: "RARE",
-    threshold: 0.75,
+    threshold: 501 / 5000,
     textStyle: { color: "#06b6d4" },
     glow: "0 0 16px rgba(6,182,212,0.8), 0 0 42px rgba(6,182,212,0.5)",
     badgeBg: "rgba(6,182,212,0.16)",
@@ -53,7 +62,7 @@ export const RARITIES: RarityDef[] = [
   {
     key: "epic",
     label: "EPIC",
-    threshold: 0.88,
+    threshold: 2501 / 5000,
     textStyle: {
       backgroundImage: "linear-gradient(90deg, #3b82f6 0%, #1e3a8a 100%)",
     },
@@ -67,7 +76,7 @@ export const RARITIES: RarityDef[] = [
   {
     key: "legendary",
     label: "LEGENDARY",
-    threshold: 0.96,
+    threshold: 4201 / 5000,
     textStyle: {
       backgroundImage: "linear-gradient(90deg, #facc15 0%, #f97316 100%)",
     },
@@ -81,7 +90,7 @@ export const RARITIES: RarityDef[] = [
   {
     key: "mythic",
     label: "MYTHIC",
-    threshold: 0.992,
+    threshold: 4901 / 5000,
     textStyle: {
       backgroundImage: "linear-gradient(90deg, #000000 0%, #4c1d95 100%)",
     },

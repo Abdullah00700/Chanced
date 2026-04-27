@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AuthModal } from "./components/AuthModal";
-import { BottomNav, type Tab } from "./components/BottomNav";
+import type { Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
+import { MenuDrawer } from "./components/MenuDrawer";
 import { PetDropModal } from "./components/PetDropModal";
 import { SaveLoadModal } from "./components/SaveLoadModal";
 import { ScreenAura } from "./components/ScreenAura";
@@ -114,6 +115,7 @@ export default function App() {
   const [pulseKey, setPulseKey] = useState(0);
   const [showSave, setShowSave] = useState(false);
   const [showWipe, setShowWipe] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [petDropId, setPetDropId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -439,16 +441,23 @@ export default function App() {
   }
 
   return (
-    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-3 pb-20">
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-3 pb-6">
       <ScreenAura color={auraColor} pulseKey={pulseKey} />
       <Header
         profile={profile}
         muted={muted}
         onToggleMute={() => setMutedState((m) => !m)}
-        onOpenSave={() => setShowSave(true)}
-        onOpenWipe={() => setShowWipe(true)}
-        onLogout={handleLogout}
+        onOpenMenu={() => setMenuOpen(true)}
       />
+
+      {tab !== "roll" && (
+        <button
+          onClick={() => setTab("roll")}
+          className="mb-3 flex items-center gap-1.5 self-start rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2.5 py-1.5 text-[11px] font-bold text-zinc-300 active:bg-zinc-800"
+        >
+          ← Back to roll
+        </button>
+      )}
 
       {tab === "roll" && (
         <RollView
@@ -479,7 +488,15 @@ export default function App() {
         <LeaderboardView entries={leaderboard} currentUser={profile.username} />
       )}
 
-      <BottomNav active={tab} onChange={setTab} />
+      <MenuDrawer
+        open={menuOpen}
+        active={tab}
+        onClose={() => setMenuOpen(false)}
+        onChangeTab={setTab}
+        onOpenSave={() => setShowSave(true)}
+        onOpenWipe={() => setShowWipe(true)}
+        onLogout={handleLogout}
+      />
 
       {showSave && (
         <SaveLoadModal profile={profile} onClose={() => setShowSave(false)} />

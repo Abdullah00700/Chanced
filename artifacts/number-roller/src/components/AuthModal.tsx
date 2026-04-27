@@ -17,9 +17,9 @@ export function AuthModal({
   onSignup: (profile: Profile) => void;
   onLoadFromCode: (profile: Profile, password: string) => void;
 }) {
-  const [mode, setMode] = useState<Mode>(
-    Object.keys(accounts).length > 0 ? "login" : "signup",
-  );
+  // Always default to signup so new players are prompted to register.
+  // Existing users can switch to the Login tab.
+  const [mode, setMode] = useState<Mode>("signup");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");

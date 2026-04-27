@@ -6,16 +6,12 @@ export function Header({
   profile,
   muted,
   onToggleMute,
-  onOpenSave,
-  onOpenWipe,
-  onLogout,
+  onOpenMenu,
 }: {
   profile: Profile;
   muted: boolean;
   onToggleMute: () => void;
-  onOpenSave: () => void;
-  onOpenWipe: () => void;
-  onLogout: () => void;
+  onOpenMenu: () => void;
 }) {
   const need = xpForNextLevel(profile.level);
   const pct = Math.min(100, (profile.xp / need) * 100);
@@ -44,7 +40,7 @@ export function Header({
             </span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             onClick={onToggleMute}
             aria-label={muted ? "Unmute" : "Mute"}
@@ -53,22 +49,24 @@ export function Header({
             {muted ? "🔇" : "🔊"}
           </button>
           <button
-            onClick={onOpenSave}
-            className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1.5 text-[11px] font-semibold text-zinc-300 active:bg-zinc-800"
+            onClick={onOpenMenu}
+            aria-label="Open menu"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-300 active:bg-amber-500/20"
           >
-            Save
-          </button>
-          <button
-            onClick={onOpenWipe}
-            className="rounded-md border border-rose-700/40 bg-rose-950/40 px-2 py-1.5 text-[11px] font-semibold text-rose-300 active:bg-rose-900/40"
-          >
-            Wipe
-          </button>
-          <button
-            onClick={onLogout}
-            className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1.5 text-[11px] font-semibold text-zinc-300 active:bg-zinc-800"
-          >
-            Out
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              aria-hidden
+            >
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="17" x2="20" y2="17" />
+            </svg>
           </button>
         </div>
       </div>
