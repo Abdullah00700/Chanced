@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Rarity Roller"
+version = "1.0.0"
+id = "artifacts/number-roller"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22016
+
+[services.development]
+run = "pnpm --filter @workspace/number-roller run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/number-roller", "run", "build" ]
+publicDir = "artifacts/number-roller/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22016"
+BASE_PATH = "/"

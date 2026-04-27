@@ -4,6 +4,10 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
+## Artifacts
+
+- **Rarity Roller** (`artifacts/number-roller`) — Frontend-only React + Vite app at `/`. Roll a weighted number 0–10,000 (Gaussian centered at 5000); rarity tiers (common→mythic) drive color/aura. Username, leaderboard, and progress saved in `localStorage`. Save/load works via base64 codes prefixed with `RR1-`. No backend.
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
