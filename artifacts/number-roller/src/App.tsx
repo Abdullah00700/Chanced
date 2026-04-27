@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AchievementToastStack,
+  type ToastItem,
+} from "./components/AchievementToast";
 import { AuthModal } from "./components/AuthModal";
 import type { Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
@@ -117,6 +121,8 @@ export default function App() {
   const [showWipe, setShowWipe] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [petDropId, setPetDropId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastIdRef = useRef(0);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -289,7 +295,7 @@ export default function App() {
     const cur = accounts[activeUser];
     if (!cur) return;
     let next = { ...cur };
-    let awardedAny = false;
+    const justAwarded: typeof ACHIEVEMENTS = [];
     for (const a of ACHIEVEMENTS) {
       if (next.achievements[a.id]) continue;
       if (a.check(next, ctx)) {
@@ -304,14 +310,34 @@ export default function App() {
           next.level = lv.level;
           next.xp = lv.xpInLevel;
         }
-        awardedAny = true;
+        justAwarded.push(a);
       }
     }
-    if (awardedAny) {
+    if (justAwarded.length > 0) {
       playAchievement();
       const map = { ...accounts, [activeUser]: next };
       persistAccounts(map);
+      // Push a toast for each newly-unlocked achievement, slightly staggered.
+      setToasts((prev) => {
+        const queue = [...prev];
+        justAwarded.forEach((a, i) => {
+          const id = ++toastIdRef.current;
+          // Stagger by adding a tiny delay through setTimeout for visual effect.
+          if (i === 0) {
+            queue.push({ id, achievement: a });
+          } else {
+            setTimeout(() => {
+              setToasts((p) => [...p, { id, achievement: a }]);
+            }, i * 350);
+          }
+        });
+        return queue;
+      });
     }
+  }
+
+  function dismissToast(id: number) {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
   // ---- Shop actions ----
@@ -518,6 +544,8 @@ export default function App() {
           }}
         />
       )}
+
+      <AchievementToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
