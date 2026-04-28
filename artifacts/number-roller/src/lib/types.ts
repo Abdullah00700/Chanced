@@ -33,7 +33,13 @@ export type Profile = {
 
   upgrades: { coin: number; rarity: number };
   pets: Record<string, PetInstance>;
-  equippedPet: string | null;
+  /**
+   * Up to 3 pet slots. Index 0 is always available; slots 1 and 2 are
+   * unlocked by purchasing extra slots with gems (see `extraSlots`).
+   */
+  equippedPets: (string | null)[];
+  /** Number of extra slots purchased (0-2). Total slots = 1 + extraSlots. */
+  extraSlots: number;
   achievements: Record<string, number>;
 
   // Tracks consecutive mythic rolls for the special achievement.

@@ -28,21 +28,24 @@ export function PetsView({
   onEquip,
   onBuyPet,
   onUpgradePet,
+  onBuyExtraSlot,
+  extraSlotCost,
 }: {
   profile: Profile;
-  onEquip: (id: string | null) => void;
+  onEquip: (id: string | null, slot?: number) => void;
   onBuyPet: (id: string) => void;
   onUpgradePet: (id: string) => void;
+  onBuyExtraSlot: () => void;
+  extraSlotCost: (currentExtra: number) => number;
 }) {
   const [filter, setFilter] = useState<RarityKey | "all">("all");
 
-  const equipped = profile.equippedPet
-    ? PETS.find((p) => p.id === profile.equippedPet) ?? null
-    : null;
+  const totalSlots = 1 + profile.extraSlots;
+  const equippedIds = profile.equippedPets;
+  const equippedSet = new Set(equippedIds.filter((id): id is string => !!id));
 
   const visible = useMemo(() => {
     if (filter === "all") return PETS;
-    // Filter by *current* rarity for owned pets, base rarity otherwise.
     return PETS.filter((p) => {
       const inst = profile.pets[p.id];
       const cur = inst ? petCurrentRarity(p, inst.level) : p.baseRarity;
@@ -53,29 +56,71 @@ export function PetsView({
   return (
     <div className="flex flex-col gap-3 pb-4">
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/70 p-3">
-        <div className="mb-1.5 text-[10px] uppercase tracking-widest text-zinc-500">
-          Equipped
+        <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-widest text-zinc-500">
+          <span>Equipped Pets</span>
+          <span className="text-zinc-600">
+            {equippedSet.size} / {totalSlots} slot{totalSlots === 1 ? "" : "s"}
+          </span>
         </div>
-        {equipped ? (
-          <div className="flex items-center gap-3">
-            <PetArt art={equipped.art} size={48} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-extrabold text-zinc-100">
-                {equipped.name}
+        <div className="grid grid-cols-1 gap-2">
+          {Array.from({ length: totalSlots }).map((_, i) => {
+            const id = equippedIds[i] ?? null;
+            const def = id ? PETS.find((p) => p.id === id) ?? null : null;
+            return (
+              <div
+                key={i}
+                className={
+                  "flex items-center gap-3 rounded-lg border p-2 " +
+                  (def
+                    ? "border-amber-500/30 bg-zinc-900/40"
+                    : "border-dashed border-zinc-800 bg-zinc-950/40")
+                }
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-zinc-950/60">
+                  {def ? (
+                    <PetArt art={def.art} size={44} />
+                  ) : (
+                    <span className="text-[10px] font-bold text-zinc-600">
+                      SLOT {i + 1}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {def ? (
+                    <>
+                      <div className="truncate text-sm font-extrabold text-zinc-100">
+                        {def.name}
+                      </div>
+                      <div className="truncate text-[11px] text-zinc-400">
+                        {def.flavor}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-[11px] text-zinc-500">
+                      Empty slot — equip a pet from below.
+                    </div>
+                  )}
+                </div>
+                {def && (
+                  <button
+                    onClick={() => onEquip(null, i)}
+                    className="shrink-0 rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 text-[11px] font-semibold text-zinc-300 active:bg-zinc-800"
+                  >
+                    Unequip
+                  </button>
+                )}
               </div>
-              <div className="text-[11px] text-zinc-400">{equipped.flavor}</div>
-            </div>
-            <button
-              onClick={() => onEquip(null)}
-              className="rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 text-[11px] font-semibold text-zinc-300 active:bg-zinc-800"
-            >
-              Unequip
-            </button>
-          </div>
-        ) : (
-          <div className="text-sm text-zinc-500">
-            No pet equipped. Equip one for permanent boosts.
-          </div>
+            );
+          })}
+        </div>
+
+        {profile.extraSlots < 2 && (
+          <ExtraSlotBuy
+            currentExtra={profile.extraSlots}
+            gems={profile.gems}
+            cost={extraSlotCost(profile.extraSlots)}
+            onBuy={onBuyExtraSlot}
+          />
         )}
       </div>
 
@@ -86,7 +131,7 @@ export function PetsView({
         {visible.map((p) => {
           const inst = profile.pets[p.id];
           const owned = !!inst;
-          const isEquipped = profile.equippedPet === p.id;
+          const isEquipped = equippedSet.has(p.id);
           const curRarity = inst ? petCurrentRarity(p, inst.level) : p.baseRarity;
           const r = RARITY_BY_KEY[curRarity];
           const canAffordBuy =
@@ -220,6 +265,45 @@ function RarityFilter({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function ExtraSlotBuy({
+  currentExtra,
+  gems,
+  cost,
+  onBuy,
+}: {
+  currentExtra: number;
+  gems: number;
+  cost: number;
+  onBuy: () => void;
+}) {
+  const canAfford = gems >= cost;
+  const slotNumber = currentExtra + 2; // showing slot we'd unlock (2 or 3)
+  return (
+    <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2">
+      <div className="min-w-0">
+        <div className="text-[11px] font-extrabold text-violet-200">
+          Unlock Slot {slotNumber}
+        </div>
+        <div className="text-[10px] text-zinc-400">
+          Equip another pet to stack their boosts.
+        </div>
+      </div>
+      <button
+        onClick={onBuy}
+        disabled={!canAfford}
+        className={
+          "shrink-0 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold " +
+          (canAfford
+            ? "bg-violet-500 text-zinc-950 active:bg-violet-600"
+            : "bg-zinc-800 text-zinc-500")
+        }
+      >
+        {cost}✦
+      </button>
     </div>
   );
 }

@@ -21,6 +21,29 @@ const RARITIES: RarityKey[] = [
  * Migrate older profiles into the current schema, filling missing fields with
  * sensible defaults so old save codes / accounts keep working.
  */
+function clampSlot(raw: any): number {
+  const n = typeof raw === "number" ? Math.floor(raw) : 0;
+  return Math.max(0, Math.min(2, n));
+}
+
+function migrateEquippedPets(raw: any): (string | null)[] {
+  const slots = clampSlot(raw?.extraSlots) + 1;
+  // New schema
+  if (Array.isArray(raw?.equippedPets)) {
+    const arr = raw.equippedPets.map((v: unknown) =>
+      typeof v === "string" ? v : null,
+    );
+    while (arr.length < slots) arr.push(null);
+    return arr.slice(0, slots);
+  }
+  // Old schema: single equippedPet
+  const out: (string | null)[] = [
+    typeof raw?.equippedPet === "string" ? raw.equippedPet : null,
+  ];
+  while (out.length < slots) out.push(null);
+  return out;
+}
+
 function migrateProfile(raw: any): Profile {
   const rollsByRarity = { ...(raw.rollsByRarity ?? {}) } as Record<
     RarityKey,
@@ -55,7 +78,8 @@ function migrateProfile(raw: any): Profile {
     rarestProb: raw.rarestProb ?? null,
     upgrades: { coin: raw.upgrades?.coin ?? 0, rarity: raw.upgrades?.rarity ?? 0 },
     pets,
-    equippedPet: raw.equippedPet ?? null,
+    equippedPets: migrateEquippedPets(raw),
+    extraSlots: clampSlot(raw.extraSlots),
     achievements: raw.achievements ?? {},
     mythicStreak: raw.mythicStreak ?? 0,
     boosters: {
@@ -160,7 +184,8 @@ export function emptyProfile(
     rarestProb: null,
     upgrades: { coin: 0, rarity: 0 },
     pets: {},
-    equippedPet: null,
+    equippedPets: [null],
+    extraSlots: 0,
     achievements: {},
     mythicStreak: 0,
     boosters: { coinUntil: 0, rarityUntil: 0 },

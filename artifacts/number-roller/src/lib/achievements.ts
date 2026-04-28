@@ -120,7 +120,7 @@ const A: Achievement[] = [
     description: "Equip any pet.",
     rarity: "common",
     reward: { coins: 200, xp: 100, gems: 1 },
-    check: (p) => p.equippedPet != null,
+    check: (p) => p.equippedPets.some((id) => id != null),
   },
   {
     id: "rolled_any_5xxx",

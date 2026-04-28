@@ -136,17 +136,37 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  // Currently equipped pet — including its current per-level effective effect.
-  const equippedEffect = useMemo(() => {
-    if (!profile?.equippedPet) return null;
-    const def = PET_BY_ID[profile.equippedPet];
-    const inst = profile.pets[profile.equippedPet];
-    if (!def || !inst) return null;
-    return { def, inst, eff: effectiveEffect(def, inst.level) };
+  // All currently equipped pets across slots — combined into one effect.
+  const equippedEffects = useMemo(() => {
+    if (!profile) return [] as Array<{ def: typeof PET_BY_ID[string]; inst: PetInstance; eff: ReturnType<typeof effectiveEffect> }>;
+    const out: Array<{ def: typeof PET_BY_ID[string]; inst: PetInstance; eff: ReturnType<typeof effectiveEffect> }> = [];
+    for (const id of profile.equippedPets) {
+      if (!id) continue;
+      const def = PET_BY_ID[id];
+      const inst = profile.pets[id];
+      if (!def || !inst) continue;
+      out.push({ def, inst, eff: effectiveEffect(def, inst.level) });
+    }
+    return out;
   }, [profile]);
 
-  const cyberneticActive =
-    equippedEffect?.def.id === "cybernetic-dragon";
+  const combinedPetEffect = useMemo(() => {
+    let coinMult = 1;
+    let xpMult = 1;
+    let rarityTilt = 0;
+    let rollSpeedMult = 1;
+    for (const e of equippedEffects) {
+      coinMult *= e.eff.coinMult;
+      xpMult *= e.eff.xpMult;
+      rarityTilt += e.eff.rarityTilt;
+      rollSpeedMult *= e.eff.rollSpeedMult;
+    }
+    return { coinMult, xpMult, rarityTilt, rollSpeedMult };
+  }, [equippedEffects]);
+
+  const cyberneticActive = equippedEffects.some(
+    (e) => e.def.id === "cybernetic-dragon",
+  );
 
   // ---- Distribution ----
   const distTilt = useMemo(() => {
@@ -154,16 +174,16 @@ export default function App() {
     const fromUpgrade = rarityUpgradeTilt(profile.upgrades.rarity);
     const fromLevel = rarityTiltFromLevel(profile.level);
     const fromBooster = profile.boosters.rarityUntil > now ? 0.4 : 0;
-    const fromPet = equippedEffect?.eff.rarityTilt ?? 0;
+    const fromPet = combinedPetEffect.rarityTilt;
     return Math.min(2, fromUpgrade + fromLevel + fromBooster + fromPet);
-  }, [profile, now, equippedEffect]);
+  }, [profile, now, combinedPetEffect]);
 
   const dist = useMemo(
     () => buildDistribution(distTilt, cyberneticActive),
     [distTilt, cyberneticActive],
   );
 
-  const rollSpeedMult = equippedEffect?.eff.rollSpeedMult ?? 1;
+  const rollSpeedMult = combinedPetEffect.rollSpeedMult;
 
   // ---- Roll logic ----
   const rollAbortRef = useRef(0);
@@ -493,13 +513,60 @@ export default function App() {
     playPurchase();
     setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
   }
-  function equipPet(id: string | null) {
+  function equipPet(id: string | null, slot?: number) {
     if (!profile) return;
     if (id && !profile.pets[id]) return;
+    const totalSlots = 1 + profile.extraSlots;
     updateProfile((p) => {
-      p.equippedPet = id;
+      const slots = [...p.equippedPets];
+      while (slots.length < totalSlots) slots.push(null);
+      slots.length = totalSlots;
+      if (id == null) {
+        // Unequip: if slot specified, clear it; otherwise clear all matching
+        if (typeof slot === "number") {
+          if (slot >= 0 && slot < totalSlots) slots[slot] = null;
+        } else {
+          for (let i = 0; i < slots.length; i++) slots[i] = null;
+        }
+      } else {
+        // Equip into target slot. Toggle if already equipped there.
+        // Also remove any other slot already holding this pet (no duplicates).
+        let target = typeof slot === "number" ? slot : -1;
+        if (target < 0) {
+          // Find first empty slot, otherwise replace slot 0.
+          target = slots.findIndex((s) => s == null);
+          if (target < 0) target = 0;
+        }
+        if (target >= 0 && target < totalSlots) {
+          if (slots[target] === id) {
+            slots[target] = null; // toggle off
+          } else {
+            for (let i = 0; i < slots.length; i++) {
+              if (slots[i] === id) slots[i] = null;
+            }
+            slots[target] = id;
+          }
+        }
+      }
+      p.equippedPets = slots;
       return p;
     });
+  }
+
+  function buyExtraSlot() {
+    if (!profile) return;
+    if (profile.extraSlots >= 2) return;
+    const cost = extraSlotCost(profile.extraSlots);
+    if (profile.gems < cost) return;
+    updateProfile((p) => {
+      p.gems -= cost;
+      p.extraSlots = Math.min(2, p.extraSlots + 1);
+      const slots = [...p.equippedPets];
+      while (slots.length < 1 + p.extraSlots) slots.push(null);
+      p.equippedPets = slots;
+      return p;
+    });
+    playPurchase();
   }
 
   // ---- Auth handlers ----
@@ -599,6 +666,8 @@ export default function App() {
           onEquip={equipPet}
           onBuyPet={buyPet}
           onUpgradePet={upgradePet}
+          onBuyExtraSlot={buyExtraSlot}
+          extraSlotCost={extraSlotCost}
         />
       )}
       {tab === "achievements" && <AchievementsView profile={profile} />}
@@ -631,7 +700,7 @@ export default function App() {
           petId={petDropId}
           onClose={() => setPetDropId(null)}
           onEquip={() => {
-            equipPet(petDropId);
+            equipPet(petDropId, undefined);
             setPetDropId(null);
           }}
         />
@@ -645,6 +714,16 @@ export default function App() {
 // ---- Helpers ----
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
+}
+
+// Cost in gems to unlock the next extra pet slot.
+// Slot 2 (first extra) = 75 gems, Slot 3 (second extra) = 200 gems.
+const EXTRA_SLOT_GEM_COSTS = [75, 200];
+function extraSlotCost(currentExtra: number): number {
+  if (currentExtra < 0 || currentExtra >= EXTRA_SLOT_GEM_COSTS.length) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return EXTRA_SLOT_GEM_COSTS[currentExtra];
 }
 
 function sumTierProb(probs: Float64Array, tier: RarityKey): number {
@@ -664,13 +743,14 @@ function produceRollResult(
   const r = rarityFor(n);
   let petCoinMult = 1;
   let petXpMult = 1;
-  if (profile.equippedPet) {
-    const def = PET_BY_ID[profile.equippedPet];
-    const inst = profile.pets[profile.equippedPet];
+  for (const id of profile.equippedPets) {
+    if (!id) continue;
+    const def = PET_BY_ID[id];
+    const inst = profile.pets[id];
     if (def && inst) {
       const eff = effectiveEffect(def, inst.level);
-      petCoinMult = eff.coinMult;
-      petXpMult = eff.xpMult;
+      petCoinMult *= eff.coinMult;
+      petXpMult *= eff.xpMult;
     }
   }
   const baseCoins = r.baseCoins;
