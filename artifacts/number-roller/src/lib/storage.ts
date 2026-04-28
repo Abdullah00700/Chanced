@@ -1,4 +1,12 @@
-import type { LeaderEntry, PetInstance, Profile, RarityKey } from "./types";
+import type {
+  ActiveHatch,
+  LeaderEntry,
+  PetInstance,
+  Profile,
+  QuestsState,
+  RarityKey,
+  WeatherState,
+} from "./types";
 
 export const LS_ACCOUNTS = "rr2.accounts";
 export const LS_ACTIVE = "rr2.active";
@@ -17,10 +25,6 @@ const RARITIES: RarityKey[] = [
   "unobtainable",
 ];
 
-/**
- * Migrate older profiles into the current schema, filling missing fields with
- * sensible defaults so old save codes / accounts keep working.
- */
 function clampSlot(raw: any): number {
   const n = typeof raw === "number" ? Math.floor(raw) : 0;
   return Math.max(0, Math.min(2, n));
@@ -28,7 +32,6 @@ function clampSlot(raw: any): number {
 
 function migrateEquippedPets(raw: any): (string | null)[] {
   const slots = clampSlot(raw?.extraSlots) + 1;
-  // New schema
   if (Array.isArray(raw?.equippedPets)) {
     const arr = raw.equippedPets.map((v: unknown) =>
       typeof v === "string" ? v : null,
@@ -36,12 +39,61 @@ function migrateEquippedPets(raw: any): (string | null)[] {
     while (arr.length < slots) arr.push(null);
     return arr.slice(0, slots);
   }
-  // Old schema: single equippedPet
   const out: (string | null)[] = [
     typeof raw?.equippedPet === "string" ? raw.equippedPet : null,
   ];
   while (out.length < slots) out.push(null);
   return out;
+}
+
+function migrateQuests(raw: any): QuestsState {
+  const q = raw?.quests ?? {};
+  return {
+    dailyAssigned: Array.isArray(q.dailyAssigned) ? q.dailyAssigned : [],
+    dailyProgress: q.dailyProgress && typeof q.dailyProgress === "object"
+      ? q.dailyProgress
+      : {},
+    dailyClaimed: q.dailyClaimed && typeof q.dailyClaimed === "object"
+      ? q.dailyClaimed
+      : {},
+    dailyRefreshAt: typeof q.dailyRefreshAt === "number" ? q.dailyRefreshAt : 0,
+    weeklyAssigned: Array.isArray(q.weeklyAssigned) ? q.weeklyAssigned : [],
+    weeklyProgress: q.weeklyProgress && typeof q.weeklyProgress === "object"
+      ? q.weeklyProgress
+      : {},
+    weeklyClaimed: q.weeklyClaimed && typeof q.weeklyClaimed === "object"
+      ? q.weeklyClaimed
+      : {},
+    weeklyRefreshAt:
+      typeof q.weeklyRefreshAt === "number" ? q.weeklyRefreshAt : 0,
+    specialProgress:
+      q.specialProgress && typeof q.specialProgress === "object"
+        ? q.specialProgress
+        : {},
+  };
+}
+
+function migrateWeather(raw: any): WeatherState {
+  const w = raw?.weather ?? {};
+  return {
+    activeId: typeof w.activeId === "string" ? w.activeId : null,
+    activeUntil: typeof w.activeUntil === "number" ? w.activeUntil : 0,
+    nextAutoAt: typeof w.nextAutoAt === "number" ? w.nextAutoAt : 0,
+    manualCooldownUntil:
+      typeof w.manualCooldownUntil === "number" ? w.manualCooldownUntil : 0,
+  };
+}
+
+function migrateHatch(raw: any): ActiveHatch | null {
+  const h = raw?.hatch;
+  if (!h || typeof h !== "object") return null;
+  if (typeof h.eggId !== "string") return null;
+  return {
+    eggId: h.eggId,
+    startedAt: typeof h.startedAt === "number" ? h.startedAt : Date.now(),
+    durationMs:
+      typeof h.durationMs === "number" ? h.durationMs : 30_000,
+  };
 }
 
 function migrateProfile(raw: any): Profile {
@@ -52,7 +104,6 @@ function migrateProfile(raw: any): Profile {
   for (const r of RARITIES) {
     if (typeof rollsByRarity[r] !== "number") rollsByRarity[r] = 0;
   }
-  // Pet instances may have been { ownedAt: number } only — ensure { level }.
   const pets: Record<string, PetInstance> = {};
   for (const id of Object.keys(raw.pets ?? {})) {
     const inst = raw.pets[id] ?? {};
@@ -61,6 +112,13 @@ function migrateProfile(raw: any): Profile {
       level: typeof inst.level === "number" && inst.level > 0 ? inst.level : 1,
     };
   }
+  const eggs: Record<string, number> = {};
+  if (raw.eggs && typeof raw.eggs === "object") {
+    for (const k of Object.keys(raw.eggs)) {
+      const v = raw.eggs[k];
+      if (typeof v === "number" && v > 0) eggs[k] = Math.floor(v);
+    }
+  }
   return {
     username: raw.username,
     passwordHash: raw.passwordHash,
@@ -68,6 +126,7 @@ function migrateProfile(raw: any): Profile {
     gems: raw.gems ?? 0,
     xp: raw.xp ?? 0,
     level: raw.level ?? 1,
+    rebirths: typeof raw.rebirths === "number" ? raw.rebirths : 0,
     totalRolls: raw.totalRolls ?? 0,
     rollsByRarity,
     bestNumber: raw.bestNumber ?? null,
@@ -85,9 +144,18 @@ function migrateProfile(raw: any): Profile {
     boosters: {
       coinUntil: raw.boosters?.coinUntil ?? 0,
       rarityUntil: raw.boosters?.rarityUntil ?? 0,
+      xpUntil: raw.boosters?.xpUntil ?? 0,
     },
+    eggs,
+    hatch: migrateHatch(raw),
+    petAbilityNext:
+      raw.petAbilityNext && typeof raw.petAbilityNext === "object"
+        ? raw.petAbilityNext
+        : {},
+    quests: migrateQuests(raw),
+    weather: migrateWeather(raw),
     createdAt: raw.createdAt ?? Date.now(),
-    schemaVersion: 3,
+    schemaVersion: 4,
   };
 }
 
@@ -166,6 +234,7 @@ export function emptyProfile(
     gems: 0,
     xp: 0,
     level: 1,
+    rebirths: 0,
     totalRolls: 0,
     rollsByRarity: {
       common: 0,
@@ -188,8 +257,28 @@ export function emptyProfile(
     extraSlots: 0,
     achievements: {},
     mythicStreak: 0,
-    boosters: { coinUntil: 0, rarityUntil: 0 },
+    boosters: { coinUntil: 0, rarityUntil: 0, xpUntil: 0 },
+    eggs: {},
+    hatch: null,
+    petAbilityNext: {},
+    quests: {
+      dailyAssigned: [],
+      dailyProgress: {},
+      dailyClaimed: {},
+      dailyRefreshAt: 0,
+      weeklyAssigned: [],
+      weeklyProgress: {},
+      weeklyClaimed: {},
+      weeklyRefreshAt: 0,
+      specialProgress: {},
+    },
+    weather: {
+      activeId: null,
+      activeUntil: 0,
+      nextAutoAt: 0,
+      manualCooldownUntil: 0,
+    },
     createdAt: Date.now(),
-    schemaVersion: 3,
+    schemaVersion: 4,
   };
 }

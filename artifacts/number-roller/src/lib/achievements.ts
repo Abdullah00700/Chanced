@@ -346,7 +346,7 @@ const A: Achievement[] = [
     rarity: "rare",
     reward: { coins: 5000, xp: 2000, gems: 3 },
     check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 11),
+      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 16),
   },
 
   // ============================ EPIC ============================
@@ -405,7 +405,16 @@ const A: Achievement[] = [
     rarity: "epic",
     reward: { coins: 25000, xp: 8000, gems: 8 },
     check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 21),
+      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 31),
+  },
+  {
+    id: "evolved_pet_epic",
+    name: "Sapphire Soul",
+    description: "Evolve a pet to EPIC.",
+    rarity: "epic",
+    reward: { coins: 75000, xp: 25000, gems: 12 },
+    check: (p) =>
+      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 46),
   },
   {
     id: "coin_upgrade_25",
@@ -480,7 +489,15 @@ const A: Achievement[] = [
     rarity: "legendary",
     reward: { coins: 500000, xp: 150000, gems: 30 },
     check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 41),
+      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 61),
+  },
+  {
+    id: "first_rebirth",
+    name: "Reborn",
+    description: "Perform your first rebirth.",
+    rarity: "legendary",
+    reward: { coins: 250000, xp: 100000, gems: 25 },
+    check: (p) => (p.rebirths ?? 0) >= 1,
   },
 
   // ============================ MYTHIC ============================
@@ -531,38 +548,23 @@ const A: Achievement[] = [
     rarity: "mythic",
     reward: { coins: 5_000_000, xp: 1_000_000, gems: 150 },
     check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 51),
-  },
-
-  // ============================ UNOBTAINABLE ============================
-  {
-    id: "the_unobtainable",
-    name: "Beyond the Curve",
-    description:
-      "Roll an UNOBTAINABLE, OR land 3 mythics in a row. Drops the Cybernetic Ultimate Dragon.",
-    rarity: "unobtainable",
-    reward: {
-      coins: 10_000_000,
-      xp: 5_000_000,
-      gems: 1000,
-      petId: "cybernetic-dragon",
-    },
-    check: (_p, c) =>
-      c.lastRoll?.rarity === "unobtainable" || (c.mythicStreak ?? 0) >= 3,
+      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 81),
   },
   {
-    id: "cosmic_ascent",
-    name: "Cosmic Ascent",
-    description:
-      "Roll an UNOBTAINABLE number. The Cosmic Serpent recognizes its master.",
-    rarity: "unobtainable",
-    reward: {
-      coins: 25_000_000,
-      xp: 10_000_000,
-      gems: 2000,
-      petId: "cosmic-serpent",
-    },
-    check: (_p, c) => c.lastRoll?.rarity === "unobtainable",
+    id: "rebirth_5",
+    name: "Cycle of Five",
+    description: "Reach 5 rebirths.",
+    rarity: "mythic",
+    reward: { coins: 5_000_000, xp: 2_000_000, gems: 200 },
+    check: (p) => (p.rebirths ?? 0) >= 5,
+  },
+  {
+    id: "rebirth_15",
+    name: "Endless Cycle",
+    description: "Reach 15 rebirths.",
+    rarity: "mythic",
+    reward: { coins: 25_000_000, xp: 10_000_000, gems: 500 },
+    check: (p) => (p.rebirths ?? 0) >= 15,
   },
 ];
 

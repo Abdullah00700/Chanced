@@ -12,6 +12,37 @@ export type PetInstance = {
   level: number;
 };
 
+export type EggInstance = number; // count owned
+
+export type ActiveHatch = {
+  eggId: string;
+  startedAt: number;
+  durationMs: number;
+};
+
+export type QuestProgressMap = Record<string, number>;
+export type QuestClaimMap = Record<string, number>;
+
+export type QuestsState = {
+  dailyAssigned: string[];
+  dailyProgress: QuestProgressMap;
+  dailyClaimed: QuestClaimMap;
+  dailyRefreshAt: number;
+  weeklyAssigned: string[];
+  weeklyProgress: QuestProgressMap;
+  weeklyClaimed: QuestClaimMap;
+  weeklyRefreshAt: number;
+  /** Counters for special quests (monkey-max-level, scaly legendary rolls, shark mythic rolls). */
+  specialProgress: QuestProgressMap;
+};
+
+export type WeatherState = {
+  activeId: string | null;
+  activeUntil: number;
+  nextAutoAt: number;
+  manualCooldownUntil: number;
+};
+
 export type Profile = {
   username: string;
   passwordHash: string;
@@ -20,6 +51,8 @@ export type Profile = {
   gems: number;
   xp: number;
   level: number;
+
+  rebirths: number;
 
   totalRolls: number;
   rollsByRarity: Record<RarityKey, number>;
@@ -48,10 +81,22 @@ export type Profile = {
   boosters: {
     coinUntil: number;
     rarityUntil: number;
+    xpUntil: number;
   };
 
+  // Eggs in inventory (id -> count owned, unhatched).
+  eggs: Record<string, number>;
+  // Currently hatching slot (one at a time).
+  hatch: ActiveHatch | null;
+
+  // Per-pet next ability trigger timestamps.
+  petAbilityNext: Record<string, number>;
+
+  quests: QuestsState;
+  weather: WeatherState;
+
   createdAt: number;
-  schemaVersion: 3;
+  schemaVersion: 4;
 };
 
 export type LeaderEntry = {

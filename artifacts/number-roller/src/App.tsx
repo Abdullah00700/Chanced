@@ -4,15 +4,17 @@ import {
   type ToastItem,
 } from "./components/AchievementToast";
 import { AuthModal } from "./components/AuthModal";
-import type { Tab } from "./components/BottomNav";
+import { BottomNav, type Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { MenuDrawer } from "./components/MenuDrawer";
 import { PetDropModal } from "./components/PetDropModal";
 import { SaveLoadModal } from "./components/SaveLoadModal";
 import { ScreenAura } from "./components/ScreenAura";
+import { WeatherChip, WeatherOverlay } from "./components/WeatherOverlay";
 import { WipeModal } from "./components/WipeModal";
 import { ACHIEVEMENTS } from "./lib/achievements";
 import { buildDistribution, sampleWithBoost } from "./lib/distribution";
+import { EGG_BY_ID, rollEggHatch } from "./lib/eggs";
 import {
   applyXpGain,
   coinMultFromLevel,
@@ -21,18 +23,38 @@ import {
 } from "./lib/level";
 import {
   effectiveEffect,
+  evolutionInfo,
   isPetMaxed,
+  MAX_PET_LEVEL,
   PET_BY_ID,
+  PETS,
   petUpgradeCost,
   rollPetDrop,
 } from "./lib/pets";
+import {
+  advanceForRoll,
+  bumpDaily,
+  bumpWeekly,
+  maybeRefreshQuests,
+  QUEST_BY_ID,
+} from "./lib/quests";
 import { CENTER, MAX_NUMBER, RARITY_BY_KEY, rarityFor } from "./lib/rarity";
+import {
+  MAX_REBIRTH,
+  rebirthCoinMult,
+  rebirthCost,
+  rebirthRarityTilt,
+  rebirthXpMult,
+} from "./lib/rebirth";
 import {
   COIN_BOOSTER_COST,
   COIN_BOOSTER_DURATION_MS,
   COIN_BOOSTER_MULT,
   RARITY_BOOSTER_COST,
   RARITY_BOOSTER_DURATION_MS,
+  XP_BOOSTER_COST,
+  XP_BOOSTER_DURATION_MS,
+  XP_BOOSTER_MULT,
   coinUpgradeCost,
   coinUpgradeMult,
   rarityUpgradeCost,
@@ -59,14 +81,31 @@ import {
   setMuted,
 } from "./lib/sounds";
 import type { LeaderEntry, PetInstance, Profile, RarityKey } from "./lib/types";
+import {
+  pickRandomWeather,
+  WEATHER_BY_ID,
+  WEATHER_MANUAL_COOLDOWN_MS,
+} from "./lib/weather";
 import { AchievementsView } from "./views/AchievementsView";
+import { EventsView } from "./views/EventsView";
+import { InventoryView } from "./views/InventoryView";
 import { LeaderboardView } from "./views/LeaderboardView";
 import { PetsView } from "./views/PetsView";
+import { QuestsView } from "./views/QuestsView";
 import { RollView } from "./views/RollView";
 import { ShopView } from "./views/ShopView";
 
 const ROLL_BASE_DURATION_MS = 1100;
 const ROLL_TICK_MS = 70;
+
+const NORMAL_TIERS: RarityKey[] = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
+];
 
 export default function App() {
   // ---- Auth state ----
@@ -168,22 +207,36 @@ export default function App() {
     (e) => e.def.id === "cybernetic-dragon",
   );
 
-  // ---- Distribution ----
+  // ---- Weather effects (active) ----
+  const activeWeather = profile?.weather.activeId
+    ? profile.weather.activeUntil > now
+      ? WEATHER_BY_ID[profile.weather.activeId] ?? null
+      : null
+    : null;
+  const weatherEffects = activeWeather?.effects ?? {};
+
+  // ---- Distribution (with weather + rebirth) ----
   const distTilt = useMemo(() => {
     if (!profile) return 0;
     const fromUpgrade = rarityUpgradeTilt(profile.upgrades.rarity);
     const fromLevel = rarityTiltFromLevel(profile.level);
     const fromBooster = profile.boosters.rarityUntil > now ? 0.4 : 0;
     const fromPet = combinedPetEffect.rarityTilt;
-    return Math.min(2, fromUpgrade + fromLevel + fromBooster + fromPet);
-  }, [profile, now, combinedPetEffect]);
+    const fromWeather = weatherEffects.rarityTilt ?? 0;
+    const fromRebirth = rebirthRarityTilt(profile.rebirths ?? 0);
+    return Math.min(
+      3,
+      fromUpgrade + fromLevel + fromBooster + fromPet + fromWeather + fromRebirth,
+    );
+  }, [profile, now, combinedPetEffect, weatherEffects]);
 
   const dist = useMemo(
     () => buildDistribution(distTilt, cyberneticActive),
     [distTilt, cyberneticActive],
   );
 
-  const rollSpeedMult = combinedPetEffect.rollSpeedMult;
+  const rollSpeedMult =
+    combinedPetEffect.rollSpeedMult * (weatherEffects.rollSpeedMult ?? 1);
 
   // ---- Roll logic ----
   const rollAbortRef = useRef(0);
@@ -227,7 +280,10 @@ export default function App() {
     function finalize(n: number) {
       if (myToken !== rollAbortRef.current) return;
       setDisplayNumber(n);
-      const result = produceRollResult(n, dist.probs[n], profile!, now);
+      const result = produceRollResult(n, dist.probs[n], profile!, now, {
+        weatherCoinMult: weatherEffects.coinMult ?? 1,
+        weatherXpMult: weatherEffects.xpMult ?? 1,
+      });
       setRolling(false);
 
       // Maybe drop a pet (normal tier drop, never unobtainable)
@@ -285,6 +341,33 @@ export default function App() {
             ...p.pets,
             [droppedPet]: { ownedAt: Date.now(), level: 1 },
           };
+        }
+
+        // Quest progression
+        advanceForRoll(p, result.rarity, n, result.coinsEarned, result.xpEarned);
+
+        // Special-quest progression
+        const equippedIds = new Set(
+          p.equippedPets.filter((x): x is string => !!x),
+        );
+        const sp = p.quests.specialProgress;
+        if (n === 0) sp["cosmic-serpent"] = Math.max(sp["cosmic-serpent"] ?? 0, 1);
+        if (n === MAX_NUMBER || nextMythicStreak >= 3) {
+          sp["cybernetic-dragon"] = Math.max(sp["cybernetic-dragon"] ?? 0, 1);
+        }
+        if (
+          result.rarity === "legendary" &&
+          equippedIds.has("horned-gecko") &&
+          (sp["scaly-legendary-rolls"] ?? 0) < 15
+        ) {
+          sp["scaly-legendary-rolls"] = (sp["scaly-legendary-rolls"] ?? 0) + 1;
+        }
+        if (
+          result.rarity === "mythic" &&
+          equippedIds.has("shark") &&
+          (sp["shark-mythic-rolls"] ?? 0) < 7
+        ) {
+          sp["shark-mythic-rolls"] = (sp["shark-mythic-rolls"] ?? 0) + 1;
         }
         return p;
       });
@@ -376,8 +459,6 @@ export default function App() {
         });
         return queue;
       });
-      // If we granted a special pet from an achievement, show the drop modal
-      // (after the toast has appeared).
       if (grantedPets.length > 0) {
         setTimeout(() => {
           playPetDrop();
@@ -400,6 +481,8 @@ export default function App() {
       p.coins -= cost.coins;
       p.gems -= cost.gems;
       p.upgrades = { ...p.upgrades, coin: p.upgrades.coin + 1 };
+      bumpDaily(p, "d-buy-upgrade");
+      bumpWeekly(p, "w-coin-up-3");
       return p;
     });
     playPurchase();
@@ -413,6 +496,8 @@ export default function App() {
       p.coins -= cost.coins;
       p.gems -= cost.gems;
       p.upgrades = { ...p.upgrades, rarity: p.upgrades.rarity + 1 };
+      bumpDaily(p, "d-buy-upgrade");
+      bumpWeekly(p, "w-rarity-up-3");
       return p;
     });
     playPurchase();
@@ -427,6 +512,7 @@ export default function App() {
         ...p.boosters,
         coinUntil: base + COIN_BOOSTER_DURATION_MS,
       };
+      bumpDaily(p, "d-booster");
       return p;
     });
     playPurchase();
@@ -440,6 +526,21 @@ export default function App() {
         ...p.boosters,
         rarityUntil: base + RARITY_BOOSTER_DURATION_MS,
       };
+      bumpDaily(p, "d-booster");
+      return p;
+    });
+    playPurchase();
+  }
+  function buyXpBooster() {
+    if (!profile || profile.coins < XP_BOOSTER_COST) return;
+    updateProfile((p) => {
+      p.coins -= XP_BOOSTER_COST;
+      const base = Math.max(p.boosters.xpUntil, Date.now());
+      p.boosters = {
+        ...p.boosters,
+        xpUntil: base + XP_BOOSTER_DURATION_MS,
+      };
+      bumpDaily(p, "d-booster");
       return p;
     });
     playPurchase();
@@ -454,11 +555,14 @@ export default function App() {
       p.coins -= pet.costCoins;
       p.gems -= pet.costGems;
       p.pets = { ...p.pets, [id]: { ownedAt: Date.now(), level: 1 } };
+      bumpDaily(p, "d-shop-pet");
+      bumpWeekly(p, "w-shop-pet-3");
       return p;
     });
     playPurchase();
     setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
   }
+
   function upgradePet(id: string) {
     if (!profile) return;
     const def = PET_BY_ID[id];
@@ -467,52 +571,53 @@ export default function App() {
     if (def.baseRarity === "unobtainable") return;
     if (isPetMaxed(def, inst.level)) return;
     const cost = petUpgradeCost(def, inst.level);
-    if (profile.coins < cost) return;
+    if (profile.coins < cost.coins || profile.gems < cost.gems) return;
 
     // Block tier-evolution if player level too low.
-    const NORMAL_TIERS: RarityKey[] = [
-      "common",
-      "uncommon",
-      "rare",
-      "epic",
-      "legendary",
-      "mythic",
-    ];
-    const TIER_LEVEL_START: Record<string, number> = {
-      common: 1,
-      uncommon: 11,
-      rare: 21,
-      epic: 31,
-      legendary: 41,
-      mythic: 51,
-    };
+    const ev = evolutionInfo(def, inst, profile.level);
     const nextLevel = inst.level + 1;
-    // What tier will the next level land in?
-    const nextTier = NORMAL_TIERS.find(
-      (t, idx) =>
-        nextLevel >= TIER_LEVEL_START[t] &&
-        (idx === NORMAL_TIERS.length - 1 ||
-          nextLevel < TIER_LEVEL_START[NORMAL_TIERS[idx + 1]]),
-    );
-    if (nextTier) {
-      const tierIdx = NORMAL_TIERS.indexOf(nextTier);
-      const playerNeeded = tierIdx * 10; // uncommon needs 10, rare needs 20, etc.
-      if (profile.level < playerNeeded) return;
+    if (
+      ev.next != null &&
+      nextLevel >= ev.petLevelNeeded &&
+      profile.level < ev.playerLevelNeeded
+    ) {
+      return;
     }
 
+    const prevRarity = ev.cur;
+
     updateProfile((p) => {
-      p.coins -= cost;
+      p.coins -= cost.coins;
+      p.gems -= cost.gems;
       const ex = p.pets[id];
       const newInst: PetInstance = {
         ownedAt: ex?.ownedAt ?? Date.now(),
         level: nextLevel,
       };
       p.pets = { ...p.pets, [id]: newInst };
+      bumpDaily(p, "d-pet-upgrade");
+      bumpWeekly(p, "w-pet-upgrades-25");
+
+      // Special: monkey-max-level
+      if (id === "monkey") {
+        const sp = p.quests.specialProgress;
+        sp["monkey-max-level"] = Math.max(
+          sp["monkey-max-level"] ?? 0,
+          nextLevel,
+        );
+      }
+
+      // Weekly evolution counter (rarity tier crossed)
+      const newEv = evolutionInfo(def, newInst, p.level);
+      if (newEv.cur !== prevRarity) {
+        bumpWeekly(p, "w-pet-evolutions");
+      }
       return p;
     });
     playPurchase();
     setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
   }
+
   function equipPet(id: string | null, slot?: number) {
     if (!profile) return;
     if (id && !profile.pets[id]) return;
@@ -522,24 +627,20 @@ export default function App() {
       while (slots.length < totalSlots) slots.push(null);
       slots.length = totalSlots;
       if (id == null) {
-        // Unequip: if slot specified, clear it; otherwise clear all matching
         if (typeof slot === "number") {
           if (slot >= 0 && slot < totalSlots) slots[slot] = null;
         } else {
           for (let i = 0; i < slots.length; i++) slots[i] = null;
         }
       } else {
-        // Equip into target slot. Toggle if already equipped there.
-        // Also remove any other slot already holding this pet (no duplicates).
         let target = typeof slot === "number" ? slot : -1;
         if (target < 0) {
-          // Find first empty slot, otherwise replace slot 0.
           target = slots.findIndex((s) => s == null);
           if (target < 0) target = 0;
         }
         if (target >= 0 && target < totalSlots) {
           if (slots[target] === id) {
-            slots[target] = null; // toggle off
+            slots[target] = null;
           } else {
             for (let i = 0; i < slots.length; i++) {
               if (slots[i] === id) slots[i] = null;
@@ -568,6 +669,326 @@ export default function App() {
     });
     playPurchase();
   }
+
+  // ---- Egg & hatch actions ----
+  function buyEgg(eggId: string) {
+    if (!profile) return;
+    const def = EGG_BY_ID[eggId];
+    if (!def) return;
+    if ((profile.rebirths ?? 0) < def.rebirthRequired) return;
+    if (profile.gems < def.cost) return;
+    updateProfile((p) => {
+      p.gems -= def.cost;
+      p.eggs = { ...p.eggs, [eggId]: (p.eggs[eggId] ?? 0) + 1 };
+      bumpWeekly(p, "w-buy-eggs");
+      return p;
+    });
+    playPurchase();
+  }
+
+  function startHatch(eggId: string) {
+    if (!profile) return;
+    if (profile.hatch) return;
+    if ((profile.eggs[eggId] ?? 0) <= 0) return;
+    const def = EGG_BY_ID[eggId];
+    if (!def) return;
+    updateProfile((p) => {
+      p.eggs = { ...p.eggs, [eggId]: Math.max(0, (p.eggs[eggId] ?? 0) - 1) };
+      p.hatch = {
+        eggId,
+        startedAt: Date.now(),
+        durationMs: def.hatchMs,
+      };
+      return p;
+    });
+  }
+
+  function cancelHatch() {
+    if (!profile || !profile.hatch) return;
+    updateProfile((p) => {
+      p.hatch = null;
+      return p;
+    });
+  }
+
+  function claimHatch() {
+    if (!profile || !profile.hatch) return;
+    const h = profile.hatch;
+    if (Date.now() - h.startedAt < h.durationMs) return;
+    const petId = rollEggHatch(h.eggId);
+    if (!petId) {
+      updateProfile((p) => {
+        p.hatch = null;
+        return p;
+      });
+      return;
+    }
+    updateProfile((p) => {
+      const ex = p.pets[petId];
+      if (ex) {
+        const newLv = Math.min(MAX_PET_LEVEL, (ex.level ?? 1) + 1);
+        p.pets = { ...p.pets, [petId]: { ...ex, level: newLv } };
+      } else {
+        p.pets = {
+          ...p.pets,
+          [petId]: { ownedAt: Date.now(), level: 1 },
+        };
+      }
+      p.hatch = null;
+      bumpDaily(p, "d-hatch-1");
+      bumpWeekly(p, "w-hatch-10");
+      return p;
+    });
+    playPetDrop();
+    setPetDropId(petId);
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+
+  // ---- Quest claim ----
+  function claimQuest(questId: string) {
+    if (!profile) return;
+    const q = QUEST_BY_ID[questId];
+    if (!q) return;
+    const prog = q.progress(profile);
+    if (prog < q.target) return;
+    if (q.kind === "daily" && profile.quests.dailyClaimed[questId]) return;
+    if (q.kind === "weekly" && profile.quests.weeklyClaimed[questId]) return;
+    if (q.kind === "special" && profile.achievements[`special-${questId}`]) {
+      return;
+    }
+    let grantedPet: string | null = null;
+    updateProfile((p) => {
+      p.coins += q.reward.coins;
+      p.gems += q.reward.gems;
+      if (q.reward.xp > 0) {
+        const lv = applyXpGain(p.level, p.xp, q.reward.xp);
+        p.level = lv.level;
+        p.xp = lv.xpInLevel;
+      }
+      if (q.reward.petId && !p.pets[q.reward.petId]) {
+        p.pets = {
+          ...p.pets,
+          [q.reward.petId]: { ownedAt: Date.now(), level: 1 },
+        };
+        grantedPet = q.reward.petId;
+      }
+      if (q.kind === "daily") {
+        p.quests.dailyClaimed = {
+          ...p.quests.dailyClaimed,
+          [questId]: Date.now(),
+        };
+      } else if (q.kind === "weekly") {
+        p.quests.weeklyClaimed = {
+          ...p.quests.weeklyClaimed,
+          [questId]: Date.now(),
+        };
+      } else {
+        p.achievements = {
+          ...p.achievements,
+          [`special-${questId}`]: Date.now(),
+        };
+      }
+      return p;
+    });
+    playPurchase();
+    if (grantedPet) {
+      playPetDrop();
+      setTimeout(() => setPetDropId(grantedPet), 300);
+    }
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+
+  // ---- Weather trigger ----
+  function triggerWeather(weatherId: string) {
+    if (!profile) return;
+    const def = WEATHER_BY_ID[weatherId];
+    if (!def) return;
+    if (profile.weather.manualCooldownUntil > now) return;
+    if (profile.weather.activeId === weatherId) return;
+    updateProfile((p) => {
+      p.weather = {
+        activeId: def.id,
+        activeUntil: Date.now() + def.durationMs,
+        nextAutoAt: Math.max(
+          p.weather.nextAutoAt,
+          Date.now() + def.durationMs + 60_000,
+        ),
+        manualCooldownUntil: Date.now() + WEATHER_MANUAL_COOLDOWN_MS,
+      };
+      bumpDaily(p, "d-event-trigger");
+      bumpWeekly(p, "w-events-5");
+      return p;
+    });
+  }
+
+  // ---- Rebirth ----
+  function doRebirth() {
+    if (!profile) return;
+    const cur = profile.rebirths ?? 0;
+    if (cur >= MAX_REBIRTH) return;
+    const cost = rebirthCost(cur);
+    if (profile.coins < cost) return;
+    updateProfile((p) => {
+      p.coins = 0;
+      p.rebirths = (p.rebirths ?? 0) + 1;
+      bumpWeekly(p, "w-rebirth-1");
+      return p;
+    });
+    playLevelUp();
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+  }
+
+  // ---- Tick: refresh quests, auto weather, pet abilities ----
+  useEffect(() => {
+    if (!profile) return;
+    let changed = false;
+    const draft: Profile = {
+      ...profile,
+      quests: { ...profile.quests },
+      weather: { ...profile.weather },
+      petAbilityNext: { ...profile.petAbilityNext },
+      pets: { ...profile.pets },
+    };
+    const before = JSON.stringify({
+      q: draft.quests,
+      w: draft.weather,
+      pa: draft.petAbilityNext,
+      pets: draft.pets,
+      coins: draft.coins,
+      gems: draft.gems,
+      xp: draft.xp,
+      lvl: draft.level,
+      hatch: draft.hatch,
+    });
+
+    // Quests refresh
+    maybeRefreshQuests(draft, now);
+
+    // Auto weather: kick one off if expired and we're past nextAutoAt
+    if (draft.weather.activeUntil <= now && draft.weather.nextAutoAt <= now) {
+      const w = pickRandomWeather(draft.weather.activeId);
+      draft.weather = {
+        activeId: w.id,
+        activeUntil: now + w.durationMs,
+        nextAutoAt: now + w.durationMs + 10 * 60_000,
+        manualCooldownUntil: draft.weather.manualCooldownUntil,
+      };
+    } else if (draft.weather.activeId && draft.weather.activeUntil <= now) {
+      draft.weather.activeId = null;
+    }
+
+    // Pet abilities (only run for equipped pets)
+    for (const id of draft.equippedPets) {
+      if (!id) continue;
+      const def = PET_BY_ID[id];
+      const inst = draft.pets[id];
+      if (!def || !inst) continue;
+      const interval = def.effect.abilityIntervalMs;
+      const kind = def.effect.abilityKind;
+      if (!interval || !kind) continue;
+      const nextAt = draft.petAbilityNext[id] ?? 0;
+      if (nextAt === 0) {
+        draft.petAbilityNext[id] = now + interval;
+        continue;
+      }
+      if (nextAt > now) continue;
+      // Fire ability
+      switch (kind) {
+        case "hatch-skip": {
+          const skip = def.effect.hatchSkipMs ?? 1000;
+          if (draft.hatch) {
+            draft.hatch = {
+              ...draft.hatch,
+              startedAt: draft.hatch.startedAt - skip,
+            };
+          }
+          break;
+        }
+        case "auto-coins": {
+          draft.coins += def.effect.abilityPayload ?? 100;
+          break;
+        }
+        case "auto-xp": {
+          const lv = applyXpGain(
+            draft.level,
+            draft.xp,
+            def.effect.abilityPayload ?? 100,
+          );
+          draft.level = lv.level;
+          draft.xp = lv.xpInLevel;
+          break;
+        }
+        case "shark-eats-fish": {
+          if ((draft.pets["fish"]?.level ?? 0) > 0) {
+            draft.coins += def.effect.abilityPayload ?? 6000;
+          }
+          break;
+        }
+        case "megalodon-eats-fish": {
+          if ((draft.pets["fish"]?.level ?? 0) > 0) {
+            const fishCount = def.effect.abilityPayload ?? 30;
+            const perFish = 1000 + Math.floor(Math.random() * 4000);
+            draft.coins += fishCount * perFish;
+          }
+          break;
+        }
+        case "blue-whale": {
+          const xp = (def.effect.abilityPayload ?? 10000) * (draft.level ?? 1);
+          if ((draft.pets["fish"]?.level ?? 0) > 0) {
+            const lv = applyXpGain(draft.level, draft.xp, xp);
+            draft.level = lv.level;
+            draft.xp = lv.xpInLevel;
+          } else {
+            draft.gems = Math.max(0, draft.gems - 1);
+          }
+          break;
+        }
+        case "scaly-eat": {
+          // Refund a random shop pet under epic, level it up
+          const candidates = PETS.filter(
+            (p) =>
+              p.source !== "egg" &&
+              p.source !== "special" &&
+              p.baseRarity !== "unobtainable" &&
+              ["common", "uncommon", "rare"].includes(p.baseRarity) &&
+              draft.pets[p.id],
+          );
+          if (candidates.length > 0) {
+            const pick = candidates[Math.floor(Math.random() * candidates.length)];
+            draft.coins += pick.costCoins;
+            const ex = draft.pets[pick.id];
+            const newLv = Math.min(MAX_PET_LEVEL, (ex?.level ?? 1) + 1);
+            draft.pets = {
+              ...draft.pets,
+              [pick.id]: { ownedAt: ex?.ownedAt ?? Date.now(), level: newLv },
+            };
+          }
+          break;
+        }
+        // auto-roll / dev-monkey-roll / fennec-borrow / scaly-uplevel-all: skipped
+        default:
+          break;
+      }
+      draft.petAbilityNext[id] = now + interval;
+      changed = true;
+    }
+
+    const after = JSON.stringify({
+      q: draft.quests,
+      w: draft.weather,
+      pa: draft.petAbilityNext,
+      pets: draft.pets,
+      coins: draft.coins,
+      gems: draft.gems,
+      xp: draft.xp,
+      lvl: draft.level,
+      hatch: draft.hatch,
+    });
+    if (changed || before !== after) {
+      updateProfile(() => draft);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, activeUser]);
 
   // ---- Auth handlers ----
   function handleSignup(p: Profile) {
@@ -619,9 +1040,18 @@ export default function App() {
     );
   }
 
+  const isMenuOnlyTab =
+    tab === "pets" || tab === "achievements" || tab === "leaderboard";
+  const weatherTimeLeft = Math.max(0, profile.weather.activeUntil - now);
+
   return (
-    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-3 pb-6">
+    <div className="relative mx-auto flex min-h-dvh max-w-md flex-col px-3 pb-24">
       <ScreenAura color={auraColor} pulseKey={pulseKey} />
+      <WeatherOverlay
+        activeId={
+          profile.weather.activeUntil > now ? profile.weather.activeId : null
+        }
+      />
       <Header
         profile={profile}
         muted={muted}
@@ -629,7 +1059,23 @@ export default function App() {
         onOpenMenu={() => setMenuOpen(true)}
       />
 
-      {tab !== "roll" && (
+      {/* Top weather chip + rebirth chip */}
+      <div className="mb-3 flex flex-wrap items-center gap-1.5">
+        {profile.weather.activeUntil > now && profile.weather.activeId && (
+          <WeatherChip
+            activeId={profile.weather.activeId}
+            timeLeft={weatherTimeLeft}
+            onClick={() => setTab("events")}
+          />
+        )}
+        {(profile.rebirths ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 text-[10px] font-bold text-fuchsia-200">
+            ↻ Rebirth {profile.rebirths}
+          </span>
+        )}
+      </div>
+
+      {isMenuOnlyTab && (
         <button
           onClick={() => setTab("roll")}
           className="mb-3 flex items-center gap-1.5 self-start rounded-md border border-zinc-700/70 bg-zinc-900/60 px-2.5 py-1.5 text-[11px] font-bold text-zinc-300 active:bg-zinc-800"
@@ -658,14 +1104,33 @@ export default function App() {
           onBuyRarityUpgrade={buyRarityUpgrade}
           onBuyCoinBooster={buyCoinBooster}
           onBuyRarityBooster={buyRarityBooster}
+          onBuyXpBooster={buyXpBooster}
+          onBuyEgg={buyEgg}
+          onRebirth={doRebirth}
         />
+      )}
+      {tab === "inventory" && (
+        <InventoryView
+          profile={profile}
+          now={now}
+          onUpgradePet={upgradePet}
+          onEquip={equipPet}
+          onStartHatch={startHatch}
+          onClaimHatch={claimHatch}
+          onCancelHatch={cancelHatch}
+        />
+      )}
+      {tab === "quests" && (
+        <QuestsView profile={profile} now={now} onClaim={claimQuest} />
+      )}
+      {tab === "events" && (
+        <EventsView profile={profile} now={now} onTrigger={triggerWeather} />
       )}
       {tab === "pets" && (
         <PetsView
           profile={profile}
           onEquip={equipPet}
           onBuyPet={buyPet}
-          onUpgradePet={upgradePet}
           onBuyExtraSlot={buyExtraSlot}
           extraSlotCost={extraSlotCost}
         />
@@ -674,6 +1139,8 @@ export default function App() {
       {tab === "leaderboard" && (
         <LeaderboardView entries={leaderboard} currentUser={profile.username} />
       )}
+
+      <BottomNav active={tab} onChange={setTab} />
 
       <MenuDrawer
         open={menuOpen}
@@ -717,7 +1184,6 @@ function clamp(n: number, lo: number, hi: number) {
 }
 
 // Cost in gems to unlock the next extra pet slot.
-// Slot 2 (first extra) = 75 gems, Slot 3 (second extra) = 200 gems.
 const EXTRA_SLOT_GEM_COSTS = [75, 200];
 function extraSlotCost(currentExtra: number): number {
   if (currentExtra < 0 || currentExtra >= EXTRA_SLOT_GEM_COSTS.length) {
@@ -739,6 +1205,7 @@ function produceRollResult(
   prob: number,
   profile: Profile,
   now: number,
+  extras: { weatherCoinMult: number; weatherXpMult: number },
 ) {
   const r = rarityFor(n);
   let petCoinMult = 1;
@@ -760,11 +1227,24 @@ function produceRollResult(
   const levelCoinMult = coinMultFromLevel(profile.level);
   const boosterCoinMult =
     profile.boosters.coinUntil > now ? COIN_BOOSTER_MULT : 1;
+  const xpBoosterMult =
+    profile.boosters.xpUntil > now ? XP_BOOSTER_MULT : 1;
+  const reCoinMult = rebirthCoinMult(profile.rebirths ?? 0);
+  const reXpMult = rebirthXpMult(profile.rebirths ?? 0);
   const coinMult =
-    upgradeCoinMult * levelCoinMult * petCoinMult * boosterCoinMult;
+    upgradeCoinMult *
+    levelCoinMult *
+    petCoinMult *
+    boosterCoinMult *
+    reCoinMult *
+    extras.weatherCoinMult;
 
   const levelXpMult = xpMultFromLevel(profile.level);
-  const xpMult = levelXpMult * petXpMult;
+  const xpMult =
+    levelXpMult * petXpMult * xpBoosterMult * reXpMult * extras.weatherXpMult;
+
+  // Tier helper hint (unused but useful for future)
+  void NORMAL_TIERS;
 
   return {
     number: n,

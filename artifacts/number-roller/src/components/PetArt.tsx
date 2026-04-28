@@ -610,6 +610,371 @@ function CyberneticDragon() {
   );
 }
 
+// ==================== NEW PETS ====================
+function Owl() {
+  const pal: Palette = { body: "#a16207", bodyDark: "#451a03", belly: "#fde68a" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M16 14 L20 8 L24 14 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M48 14 L44 8 L40 14 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <circle cx="25" cy="30" r="6" fill="#fff" stroke={STROKE} strokeWidth="1.4" />
+      <circle cx="39" cy="30" r="6" fill="#fff" stroke={STROKE} strokeWidth="1.4" />
+      <circle cx="25" cy="30" r="2.6" fill="#f59e0b" />
+      <circle cx="39" cy="30" r="2.6" fill="#f59e0b" />
+      <circle cx="25" cy="30" r="1.2" fill={STROKE} />
+      <circle cx="39" cy="30" r="1.2" fill={STROKE} />
+      <path d="M28 36 L32 41 L36 36 Z" fill="#f97316" stroke={STROKE} strokeWidth="1" />
+    </svg>
+  );
+}
+function Rooster() {
+  const pal: Palette = { body: "#b91c1c", bodyDark: "#7f1d1d", belly: "#fef2f2" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M28 14 L30 6 L32 12 L34 6 L36 14 Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes />
+      <path d="M28 36 L32 42 L36 36 Z" fill="#facc15" stroke={STROKE} strokeWidth="1" />
+      <path d="M30 30 Q32 32 34 30" stroke="#dc2626" strokeWidth="1.6" fill="none" />
+    </svg>
+  );
+}
+function Falcon() {
+  const pal: Palette = { body: "#525b6b", bodyDark: "#1f2430", belly: "#cbd5e1" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M6 30 Q14 22 24 30 Q14 36 6 30 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M58 30 Q50 22 40 30 Q50 36 58 30 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes pupil="#fbbf24" />
+      <path d="M28 36 L32 42 L36 36 Z" fill="#f59e0b" stroke={STROKE} strokeWidth="1" />
+    </svg>
+  );
+}
+function Yeti() {
+  const pal: Palette = { body: "#e2e8f0", bodyDark: "#94a3b8", belly: "#f8fafc" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M14 12 L12 4 L20 14 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M50 12 L52 4 L44 14 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes pupil="#0ea5e9" />
+      <path d="M26 38 L32 44 L38 38 Z" fill={STROKE} />
+      <path d="M28 41 L28 46" stroke="#fff" strokeWidth="1.6" />
+      <path d="M36 41 L36 46" stroke="#fff" strokeWidth="1.6" />
+    </svg>
+  );
+}
+function Kraken() {
+  const pal: Palette = { body: "#7c3aed", bodyDark: "#3b0764", belly: "#a78bfa" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      {[10, 22, 32, 42, 54].map((x, i) => (
+        <path key={i} d={`M${x} 50 Q${x} 60 ${x + 4} 56`} stroke={pal.bodyDark} strokeWidth="3" fill="none" strokeLinecap="round" />
+      ))}
+      <Eyes pupil="#fbbf24" />
+      <ellipse cx="32" cy="38" rx="2" ry="1.4" fill={STROKE} />
+    </svg>
+  );
+}
+function Thunderbird() {
+  const pal: Palette = { body: "#1e3a8a", bodyDark: "#0c1e4d", belly: "#fde047" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M4 28 Q14 18 24 28 Q14 34 4 28 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M60 28 Q50 18 40 28 Q50 34 60 28 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <text x="29" y="44" fontSize="18" fill="#fde047">⚡</text>
+      <Eyes pupil="#fde047" />
+    </svg>
+  );
+}
+function CelestialStag() {
+  const pal: Palette = { body: "#312e81", bodyDark: "#0c0a3a", belly: "#a5b4fc" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M14 18 L8 6 L22 14 Z" fill="#fbbf24" stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M50 18 L56 6 L42 14 Z" fill="#fbbf24" stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <text x="14" y="46" fontSize="6" fill="#fbbf24">✦</text>
+      <text x="42" y="46" fontSize="6" fill="#fbbf24">✦</text>
+      <Eyes pupil="#fde047" />
+    </svg>
+  );
+}
+function AbyssLeviathan() {
+  const pal: Palette = { body: "#0f172a", bodyDark: "#000", belly: "#1e3a8a" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <circle cx="25" cy="30" r="3.5" fill="#22d3ee" />
+      <circle cx="39" cy="30" r="3.5" fill="#22d3ee" />
+      <circle cx="25" cy="30" r="1.4" fill="#fff" />
+      <circle cx="39" cy="30" r="1.4" fill="#fff" />
+      <path d="M22 38 L32 44 L42 38 Z" fill={STROKE} />
+      <path d="M24 41 L24 45" stroke="#fff" strokeWidth="1.4" />
+      <path d="M32 42 L32 46" stroke="#fff" strokeWidth="1.4" />
+      <path d="M40 41 L40 45" stroke="#fff" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function Monkey() {
+  const pal: Palette = { body: "#92400e", bodyDark: "#451a03", belly: "#f5d0a9" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <circle cx="16" cy="20" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <circle cx="48" cy="20" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <circle cx="16" cy="20" r="3" fill={pal.belly} />
+      <circle cx="48" cy="20" r="3" fill={pal.belly} />
+      <Body pal={pal} />
+      <ellipse cx="32" cy="38" rx="10" ry="7" fill={pal.belly} />
+      <Eyes cy={32} />
+      <ellipse cx="32" cy="38" rx="1.6" ry="1" fill={STROKE} />
+      <path d="M28 42 Q32 45 36 42" stroke={STROKE} strokeWidth="1.4" fill="none" />
+    </svg>
+  );
+}
+function TreeFrog() {
+  const pal: Palette = { body: "#4ade80", bodyDark: "#15803d", belly: "#bbf7d0" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <circle cx="22" cy="18" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <circle cx="42" cy="18" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <circle cx="22" cy="18" r="3.4" fill="#dc2626" />
+      <circle cx="42" cy="18" r="3.4" fill="#dc2626" />
+      <circle cx="22" cy="19" r="1.8" fill={STROKE} />
+      <circle cx="42" cy="19" r="1.8" fill={STROKE} />
+      <Body pal={pal} />
+      <path d="M22 38 Q32 46 42 38" fill="none" stroke={STROKE} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+function Gorilla() {
+  const pal: Palette = { body: "#27272a", bodyDark: "#0a0a0a", belly: "#52525b" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <ellipse cx="32" cy="40" rx="13" ry="10" fill={pal.belly} />
+      <Eyes pupil="#dc2626" />
+      <path d="M26 38 L32 44 L38 38 Z" fill={STROKE} />
+      <path d="M28 41 L28 45" stroke="#fff" strokeWidth="1.4" />
+      <path d="M36 41 L36 45" stroke="#fff" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function Toucan() {
+  const pal: Palette = { body: "#0a0a0a", bodyDark: "#000", belly: "#fff" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <Eyes pupil="#fbbf24" />
+      <path d="M28 32 Q40 32 50 38 Q40 42 28 38 Z" fill="#facc15" stroke={STROKE} strokeWidth="1.4" />
+      <path d="M50 38 L48 34" stroke="#dc2626" strokeWidth="2" />
+    </svg>
+  );
+}
+function Lion() {
+  const pal: Palette = { body: "#fbbf24", bodyDark: "#a16207", belly: "#fef3c7" };
+  return (
+    <svg viewBox="0 0 64 64">
+      {Array.from({ length: 12 }).map((_, i) => {
+        const a = -180 + i * 30;
+        const x1 = 32 + Math.cos((a * Math.PI) / 180) * 22;
+        const y1 = 32 + Math.sin((a * Math.PI) / 180) * 22;
+        const x2 = 32 + Math.cos((a * Math.PI) / 180) * 30;
+        const y2 = 32 + Math.sin((a * Math.PI) / 180) * 30;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#92400e" strokeWidth="3" strokeLinecap="round" />;
+      })}
+      <Body pal={pal} />
+      <Eyes pupil="#16a34a" />
+      <ellipse cx="32" cy="38" rx="2" ry="1.4" fill={STROKE} />
+      <path d="M27 42 Q32 47 37 42" stroke={STROKE} strokeWidth="1.6" fill="none" />
+    </svg>
+  );
+}
+function HornedGecko() {
+  const pal: Palette = { body: "#a16207", bodyDark: "#451a03", belly: "#fde68a" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M14 16 L18 8 L22 16 Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M50 16 L46 8 L42 16 Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes pupil="#fbbf24" />
+      <path d="M27 40 Q32 44 37 40" stroke={STROKE} strokeWidth="1.4" fill="none" />
+    </svg>
+  );
+}
+function Rattlesnake() {
+  const pal: Palette = { body: "#65a30d", bodyDark: "#365314", belly: "#fde68a" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M14 30 Q20 26 26 30 Q32 34 38 30 Q44 26 50 30" stroke={pal.bodyDark} strokeWidth="3" fill="none" />
+      <Eyes pupil="#dc2626" />
+      <path d="M28 36 L32 42 L36 36 Z" fill={STROKE} />
+      <path d="M50 50 L54 54 L52 56 L48 52 Z" fill="#a16207" stroke={STROKE} strokeWidth="1.2" />
+    </svg>
+  );
+}
+function Scorpion() {
+  const pal: Palette = { body: "#7f1d1d", bodyDark: "#3f0a0a", belly: "#fbbf24" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M50 22 L58 14 L60 8 L56 12 L52 18" stroke={pal.bodyDark} strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M14 50 L8 56 L8 60" stroke={pal.bodyDark} strokeWidth="3" fill="none" strokeLinecap="round" />
+      <Eyes pupil="#fbbf24" />
+    </svg>
+  );
+}
+function Camel() {
+  const pal: Palette = { body: "#d4a373", bodyDark: "#7c4f23", belly: "#fef3c7" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <ellipse cx="20" cy="22" rx="6" ry="5" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <ellipse cx="44" cy="22" rx="6" ry="5" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes pupil="#7c2d12" />
+      <ellipse cx="32" cy="38" rx="1.8" ry="1.2" fill={STROKE} />
+    </svg>
+  );
+}
+function FennecFox() {
+  const pal: Palette = { body: "#fde68a", bodyDark: "#fbbf24", belly: "#fff" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M10 22 L18 4 L26 20 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M54 22 L46 4 L38 20 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <Eyes pupil="#7c2d12" />
+      <ellipse cx="32" cy="38" rx="1.8" ry="1.2" fill={STROKE} />
+      <SmallSmile cy={42} />
+    </svg>
+  );
+}
+function Fish() {
+  const pal: Palette = { body: "#38bdf8", bodyDark: "#0c4a6e", belly: "#bae6fd" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M50 30 L60 22 L60 42 L50 36 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Eyes pupil="#0c4a6e" />
+      <path d="M22 38 Q26 40 30 38" stroke={STROKE} strokeWidth="1.4" fill="none" />
+    </svg>
+  );
+}
+function SeaHorse() {
+  const pal: Palette = { body: "#f472b6", bodyDark: "#9d174d", belly: "#fbcfe8" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M14 16 L22 12 L26 22" fill="none" stroke={pal.bodyDark} strokeWidth="3" strokeLinecap="round" />
+      <Eyes />
+      <path d="M30 50 Q34 56 30 60" fill="none" stroke={pal.bodyDark} strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+function Starfish() {
+  return (
+    <svg viewBox="0 0 64 64">
+      <path
+        d="M32 6 L38 26 L60 28 L42 40 L48 60 L32 48 L16 60 L22 40 L4 28 L26 26 Z"
+        fill="#fbbf24"
+        stroke={STROKE}
+        strokeWidth={STROKE_W}
+      />
+      <Eyes cy={34} />
+      <SmallSmile cy={42} />
+    </svg>
+  );
+}
+function Shark() {
+  const pal: Palette = { body: "#475569", bodyDark: "#1e293b", belly: "#cbd5e1" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M30 12 L34 4 L38 20 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <ellipse cx="32" cy="44" rx="14" ry="10" fill={pal.belly} opacity="0.9" />
+      <Eyes pupil="#dc2626" />
+      <path d="M22 36 L42 36 L40 42 L24 42 Z" fill={STROKE} />
+      {[26, 30, 34, 38].map((x, i) => (
+        <path key={i} d={`M${x} 36 L${x} 42`} stroke="#fff" strokeWidth="1" />
+      ))}
+    </svg>
+  );
+}
+function BlueWhale() {
+  const pal: Palette = { body: "#1e40af", bodyDark: "#0c1e4d", belly: "#bfdbfe" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <ellipse cx="32" cy="42" rx="18" ry="10" fill={pal.belly} opacity="0.85" />
+      <path d="M50 30 L62 22 L60 42 L50 36 Z" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Eyes cy={28} />
+      <path d="M22 38 Q26 40 30 38" stroke={STROKE} strokeWidth="1.4" fill="none" />
+      <path d="M28 12 L30 4 M30 12 L32 4 M32 12 L34 4" stroke="#bfdbfe" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function DeveloperMonkey() {
+  const pal: Palette = { body: "#451a03", bodyDark: "#0a0a0a", belly: "#f5d0a9" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <circle cx="16" cy="20" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <circle cx="48" cy="20" r="6" fill={pal.body} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <ellipse cx="32" cy="38" rx="11" ry="8" fill={pal.belly} />
+      {/* Glasses */}
+      <circle cx="25" cy="30" r="4" fill="#000" stroke="#fff" strokeWidth="1" />
+      <circle cx="39" cy="30" r="4" fill="#000" stroke="#fff" strokeWidth="1" />
+      <line x1="29" y1="30" x2="35" y2="30" stroke="#fff" strokeWidth="1.4" />
+      <text x="22" y="32" fontSize="3.6" fill="#22d3ee" fontFamily="monospace">{"01"}</text>
+      <text x="36" y="32" fontSize="3.6" fill="#22d3ee" fontFamily="monospace">{"10"}</text>
+      <ellipse cx="32" cy="38" rx="1.6" ry="1" fill={STROKE} />
+      <path d="M28 42 Q32 45 36 42" stroke={STROKE} strokeWidth="1.4" fill="none" />
+    </svg>
+  );
+}
+function ScalyDemon() {
+  const pal: Palette = { body: "#7f1d1d", bodyDark: "#3f0a0a", belly: "#facc15" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <path d="M12 14 L8 0 L24 12 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <path d="M52 14 L56 0 L40 12 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <Body pal={pal} />
+      <path d="M22 14 L26 8 L30 14 L34 8 L38 14 L42 8 L46 14" stroke={pal.bodyDark} strokeWidth="2.4" fill="none" />
+      <circle cx="25" cy="30" r="3.5" fill="#facc15" />
+      <circle cx="39" cy="30" r="3.5" fill="#facc15" />
+      <circle cx="25" cy="30" r="1.4" fill={STROKE} />
+      <circle cx="39" cy="30" r="1.4" fill={STROKE} />
+      <path d="M24 38 L32 44 L40 38 Z" fill={STROKE} />
+      <path d="M27 41 L27 45" stroke="#fff" strokeWidth="1.4" />
+      <path d="M37 41 L37 45" stroke="#fff" strokeWidth="1.4" />
+    </svg>
+  );
+}
+function Megalodon() {
+  const pal: Palette = { body: "#1e293b", bodyDark: "#020617", belly: "#475569" };
+  return (
+    <svg viewBox="0 0 64 64">
+      <Body pal={pal} />
+      <path d="M30 8 L36 0 L40 22 Z" fill={pal.bodyDark} stroke={STROKE} strokeWidth={STROKE_W} />
+      <ellipse cx="32" cy="44" rx="16" ry="11" fill={pal.belly} opacity="0.7" />
+      <circle cx="25" cy="28" r="3.5" fill="#dc2626" />
+      <circle cx="39" cy="28" r="3.5" fill="#dc2626" />
+      <circle cx="25" cy="28" r="1.4" fill="#fff" />
+      <circle cx="39" cy="28" r="1.4" fill="#fff" />
+      <path d="M14 36 L50 36 L46 46 L18 46 Z" fill={STROKE} />
+      {[20, 26, 32, 38, 44].map((x, i) => (
+        <path key={i} d={`M${x} 36 L${x - 1} 44 L${x + 1} 44 Z`} fill="#fff" />
+      ))}
+      <text x="6" y="20" fontSize="8" fill="#dc2626" fontWeight="900">✦</text>
+    </svg>
+  );
+}
+
 const ART_MAP: Record<string, () => React.ReactElement> = {
   pup: Pup,
   bunny: Bunny,
@@ -633,6 +998,33 @@ const ART_MAP: Record<string, () => React.ReactElement> = {
   "shadow-titan": ShadowTitan,
   "cosmic-serpent": CosmicSerpent,
   "cybernetic-dragon": CyberneticDragon,
+  // New additions
+  owl: Owl,
+  rooster: Rooster,
+  falcon: Falcon,
+  yeti: Yeti,
+  kraken: Kraken,
+  thunderbird: Thunderbird,
+  "celestial-stag": CelestialStag,
+  "abyss-leviathan": AbyssLeviathan,
+  monkey: Monkey,
+  "tree-frog": TreeFrog,
+  gorilla: Gorilla,
+  toucan: Toucan,
+  lion: Lion,
+  "horned-gecko": HornedGecko,
+  rattlesnake: Rattlesnake,
+  scorpion: Scorpion,
+  camel: Camel,
+  "fennec-fox": FennecFox,
+  fish: Fish,
+  "sea-horse": SeaHorse,
+  starfish: Starfish,
+  shark: Shark,
+  "blue-whale": BlueWhale,
+  "developer-monkey": DeveloperMonkey,
+  "scaly-demon": ScalyDemon,
+  megalodon: Megalodon,
 };
 
 export function PetArt({

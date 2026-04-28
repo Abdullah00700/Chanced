@@ -1,11 +1,19 @@
-export type Tab = "roll" | "shop" | "pets" | "achievements" | "leaderboard";
+export type Tab =
+  | "roll"
+  | "shop"
+  | "inventory"
+  | "quests"
+  | "events"
+  | "pets"
+  | "achievements"
+  | "leaderboard";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "roll", label: "Roll", icon: "◎" },
   { key: "shop", label: "Shop", icon: "▲" },
-  { key: "pets", label: "Pets", icon: "✦" },
-  { key: "achievements", label: "Trophies", icon: "★" },
-  { key: "leaderboard", label: "Top", icon: "≡" },
+  { key: "inventory", label: "Inv", icon: "▢" },
+  { key: "quests", label: "Quests", icon: "✎" },
+  { key: "events", label: "Events", icon: "❉" },
 ];
 
 export function BottomNav({

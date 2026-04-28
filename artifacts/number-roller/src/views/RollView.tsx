@@ -90,6 +90,7 @@ export function RollView({
       <BoosterBar
         coinUntil={profile.boosters.coinUntil}
         rarityUntil={profile.boosters.rarityUntil}
+        xpUntil={profile.boosters.xpUntil}
         now={now}
       />
 

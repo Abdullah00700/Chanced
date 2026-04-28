@@ -4,13 +4,10 @@ export const COIN_UPGRADE_GEM_THRESHOLD = 50;
 export const RARITY_UPGRADE_GEM_THRESHOLD = 50;
 
 export function coinUpgradeMult(level: number): number {
-  // each level adds 20% to coin gain
   return 1 + level * 0.2;
 }
 
 export function rarityUpgradeTilt(level: number): number {
-  // 0..1 over first 50 levels (sigma flattening),
-  // 1..2 over next 50 (U-shape blend), capped.
   return Math.min(2, level * 0.02);
 }
 
@@ -43,6 +40,9 @@ export function rarityUpgradeCost(level: number): {
 // ---- Boosters ----
 export const COIN_BOOSTER_DURATION_MS = 60_000;
 export const RARITY_BOOSTER_DURATION_MS = 60_000;
+export const XP_BOOSTER_DURATION_MS = 60_000;
 export const COIN_BOOSTER_COST = 750;
 export const RARITY_BOOSTER_COST = 3000;
+export const XP_BOOSTER_COST = 1500;
 export const COIN_BOOSTER_MULT = 2;
+export const XP_BOOSTER_MULT = 2;

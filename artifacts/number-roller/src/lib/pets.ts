@@ -6,6 +6,26 @@ export type PetEffect = {
   xpMult?: number;
   rarityTilt?: number;
   rollSpeedMult?: number; // <1 = faster
+  /** Subtract this many ms from the active hatch every time the pet's ability triggers. */
+  hatchSkipMs?: number;
+  /** How often (ms) the pet's ability triggers in the background. */
+  abilityIntervalMs?: number;
+  /** Tag describing what the ability does for the periodic tick handler. */
+  abilityKind?:
+    | "auto-roll"          // performs a roll automatically
+    | "hatch-skip"          // skips ahead in the hatch timer
+    | "auto-coins"          // grants flat coins
+    | "auto-xp"             // grants flat xp
+    | "shark-eats-fish"     // eats a fish pet for coins
+    | "blue-whale"          // periodic xp drain
+    | "fennec-borrow"       // borrows a random pet's effect briefly (cosmetic)
+    | "scaly-eat"           // eats a shop pet, refunds coins, levels it up
+    | "scaly-uplevel-all"   // levels every owned pet
+    | "megalodon-eats-fish" // big fish payouts
+    | "dev-monkey-roll"     // dev monkey auto-roll
+    ;
+  /** Generic numeric payload (ms or coins or whatever the ability uses). */
+  abilityPayload?: number;
 };
 
 export type PetDef = {
@@ -18,21 +38,26 @@ export type PetDef = {
   art: string;
   costCoins: number;
   costGems: number;
+  /** Where this pet comes from (omit for default shop). */
+  source?: "shop" | "egg" | "special";
+  /** If source==egg, which egg drops it. */
+  fromEgg?: string;
+  /** True if this pet cannot be upgraded (special quest rewards). */
+  unobtainable?: boolean;
 };
 
 // Rarity progression tiers for pet evolution.
 // Pet level → current rarity bracket:
-//   1-10  common, 11-20 uncommon, 21-30 rare, 31-40 epic,
-//   41-50 legendary, 51+ mythic.
-// Unobtainable pets ignore evolution and stay unobtainable.
+//   1-15 common, 16-30 uncommon, 31-45 rare, 46-60 epic,
+//   61-80 legendary, 81-100 mythic. (extended for level cap of 100)
 const TIER_LEVEL_START: Record<RarityKey, number> = {
   common: 1,
-  uncommon: 11,
-  rare: 21,
-  epic: 31,
-  legendary: 41,
-  mythic: 51,
-  unobtainable: 1, // unobtainable pets do not evolve
+  uncommon: 16,
+  rare: 31,
+  epic: 46,
+  legendary: 61,
+  mythic: 81,
+  unobtainable: 1,
 };
 
 const NORMAL_TIERS: RarityKey[] = [
@@ -45,17 +70,17 @@ const NORMAL_TIERS: RarityKey[] = [
 ];
 
 // Multiplier ADDED on each evolution step (to the bonus portion of an effect).
-// e.g. common→uncommon multiplies bonuses by 1.25, uncommon→rare by 1.20, etc.
 const EVOLUTION_BOOST: Partial<Record<RarityKey, number>> = {
-  uncommon: 0.25, // when evolving INTO uncommon
-  rare: 0.2, // INTO rare
-  epic: 0.15, // INTO epic
-  legendary: 0.1, // INTO legendary
-  mythic: 0.5, // INTO mythic
+  uncommon: 0.25,
+  rare: 0.2,
+  epic: 0.15,
+  legendary: 0.1,
+  mythic: 0.5,
 };
 
-const PER_LEVEL_BONUS = 0.005; // +0.5% per pet level inside a tier
-const MAX_PET_LEVEL = 60; // hard cap
+const PER_LEVEL_BONUS = 0.005;
+export const MAX_PET_LEVEL = 100;
+export const PET_GEM_LEVEL_THRESHOLD = 50;
 
 export const PETS: PetDef[] = [
   // ---- COMMON (5) ----
@@ -152,7 +177,7 @@ export const PETS: PetDef[] = [
     costGems: 0,
   },
 
-  // ---- RARE (4) ----
+  // ---- RARE (existing 4 + 2 NEW) ----
   {
     id: "wolf",
     name: "Wolf",
@@ -187,14 +212,47 @@ export const PETS: PetDef[] = [
     id: "penguin",
     name: "Penguin",
     baseRarity: "rare",
-    effect: { rollSpeedMult: 0.65, coinMult: 1.1 },
-    flavor: "Much faster rolls, +10% coins.",
+    effect: { rollSpeedMult: 0.65, coinMult: 1.1, xpMult: 1.15 },
+    flavor: "Much faster rolls, +10% coins, +15% XP.",
     art: "penguin",
     costCoins: 18000,
     costGems: 0,
   },
+  // NEW rare pets
+  {
+    id: "owl",
+    name: "Owl",
+    baseRarity: "rare",
+    effect: {
+      xpMult: 1.2,
+      hatchSkipMs: 750,
+      abilityIntervalMs: 12_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 750,
+    },
+    flavor: "+20% XP. Every 12s, skips 0.75s of any active hatch.",
+    art: "owl",
+    costCoins: 20000,
+    costGems: 0,
+  },
+  {
+    id: "rooster",
+    name: "Rooster",
+    baseRarity: "rare",
+    effect: {
+      coinMult: 1.15,
+      hatchSkipMs: 500,
+      abilityIntervalMs: 8_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 500,
+    },
+    flavor: "+15% coins. Crows every 8s, skips 0.5s of hatch time.",
+    art: "rooster",
+    costCoins: 22000,
+    costGems: 0,
+  },
 
-  // ---- EPIC (3) ----
+  // ---- EPIC (existing 3 + 2 NEW) ----
   {
     id: "leopard",
     name: "Leopard",
@@ -225,8 +283,35 @@ export const PETS: PetDef[] = [
     costCoins: 120000,
     costGems: 3,
   },
+  // NEW epic pets
+  {
+    id: "falcon",
+    name: "Falcon",
+    baseRarity: "epic",
+    effect: {
+      rollSpeedMult: 0.6,
+      hatchSkipMs: 1500,
+      abilityIntervalMs: 15_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 1500,
+    },
+    flavor: "Faster rolls. Every 15s, skips 1.5s of hatch time.",
+    art: "falcon",
+    costCoins: 100000,
+    costGems: 2,
+  },
+  {
+    id: "yeti",
+    name: "Yeti",
+    baseRarity: "epic",
+    effect: { coinMult: 1.6, rarityTilt: 0.15 },
+    flavor: "+60% coins and small rarity tilt.",
+    art: "yeti",
+    costCoins: 180000,
+    costGems: 4,
+  },
 
-  // ---- LEGENDARY (2) ----
+  // ---- LEGENDARY (existing 2 + 2 NEW) ----
   {
     id: "phoenix",
     name: "Phoenix",
@@ -247,8 +332,35 @@ export const PETS: PetDef[] = [
     costCoins: 500000,
     costGems: 8,
   },
+  // NEW legendaries
+  {
+    id: "kraken",
+    name: "Kraken",
+    baseRarity: "legendary",
+    effect: {
+      rarityTilt: 0.5,
+      hatchSkipMs: 3000,
+      abilityIntervalMs: 20_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 3000,
+    },
+    flavor: "+0.5 rarity tilt. Every 20s, skips 3s of hatch time.",
+    art: "kraken",
+    costCoins: 800000,
+    costGems: 12,
+  },
+  {
+    id: "thunderbird",
+    name: "Thunderbird",
+    baseRarity: "legendary",
+    effect: { coinMult: 2, xpMult: 1.8, rollSpeedMult: 0.7 },
+    flavor: "2× coins, +80% XP, faster rolls.",
+    art: "thunderbird",
+    costCoins: 1_200_000,
+    costGems: 18,
+  },
 
-  // ---- MYTHIC (2) ----
+  // ---- MYTHIC (existing 2 + 2 NEW) ----
   {
     id: "void-cat",
     name: "Void Cat",
@@ -269,8 +381,262 @@ export const PETS: PetDef[] = [
     costCoins: 5_000_000,
     costGems: 50,
   },
+  // NEW mythics
+  {
+    id: "celestial-stag",
+    name: "Celestial Stag",
+    baseRarity: "mythic",
+    effect: {
+      coinMult: 2.5,
+      xpMult: 2.5,
+      hatchSkipMs: 5000,
+      abilityIntervalMs: 25_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 5000,
+    },
+    flavor: "+150% coins/XP. Every 25s, skips 5s of hatch time.",
+    art: "celestial-stag",
+    costCoins: 7_500_000,
+    costGems: 80,
+  },
+  {
+    id: "abyss-leviathan",
+    name: "Abyss Leviathan",
+    baseRarity: "mythic",
+    effect: { rarityTilt: 1, coinMult: 1.5, xpMult: 1.5 },
+    flavor: "+1 rarity tilt and +50% to coins/XP.",
+    art: "abyss-leviathan",
+    costCoins: 10_000_000,
+    costGems: 100,
+  },
 
-  // ---- UNOBTAINABLE (2) — cannot be bought ----
+  // ============================================================
+  // ============== EGG-EXCLUSIVE PETS ===========================
+  // ============================================================
+
+  // ---- JUNGLE EGG ----
+  {
+    id: "monkey",
+    name: "Monkey",
+    baseRarity: "common",
+    effect: {
+      coinMult: 1.1,
+      abilityIntervalMs: 60_000,
+      abilityKind: "auto-roll",
+    },
+    flavor: "+10% coins. Auto-rolls once every 60s. Used to unlock Developer Monkey.",
+    art: "monkey",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-jungle",
+  },
+  {
+    id: "tree-frog",
+    name: "Tree Frog",
+    baseRarity: "uncommon",
+    effect: { coinMult: 1.18, xpMult: 1.12, rollSpeedMult: 0.9 },
+    flavor: "+18% coins, +12% XP, faster rolls.",
+    art: "tree-frog",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-jungle",
+  },
+  {
+    id: "gorilla",
+    name: "Gorilla",
+    baseRarity: "epic",
+    effect: { coinMult: 1.8, xpMult: 1.4 },
+    flavor: "+80% coins, +40% XP. Pure muscle.",
+    art: "gorilla",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-jungle",
+  },
+  {
+    id: "toucan",
+    name: "Toucan",
+    baseRarity: "legendary",
+    effect: {
+      xpMult: 1.8,
+      hatchSkipMs: 2000,
+      abilityIntervalMs: 18_000,
+      abilityKind: "hatch-skip",
+      abilityPayload: 2000,
+    },
+    flavor: "+80% XP. Every 18s, skips 2s of hatch.",
+    art: "toucan",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-jungle",
+  },
+  {
+    id: "lion",
+    name: "Lion",
+    baseRarity: "mythic",
+    effect: { coinMult: 2.5, xpMult: 2, rarityTilt: 0.5 },
+    flavor: "King of the jungle. +150% coins, +100% XP, +0.5 rarity tilt.",
+    art: "lion",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-jungle",
+  },
+
+  // ---- DESERT EGG ----
+  {
+    id: "horned-gecko",
+    name: "Horned Gecko",
+    baseRarity: "common",
+    effect: { rarityTilt: 0.1, coinMult: 1.1 },
+    flavor: "+0.1 rarity tilt and +10% coins. Used to unlock the Scaly Demon.",
+    art: "horned-gecko",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-desert",
+  },
+  {
+    id: "rattlesnake",
+    name: "Rattlesnake",
+    baseRarity: "rare",
+    effect: { rollSpeedMult: 0.6, coinMult: 1.15 },
+    flavor: "Strikes fast. 40% faster rolls, +15% coins.",
+    art: "rattlesnake",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-desert",
+  },
+  {
+    id: "scorpion",
+    name: "Scorpion",
+    baseRarity: "epic",
+    effect: { rarityTilt: 0.5, xpMult: 1.4 },
+    flavor: "+0.5 rarity tilt and +40% XP.",
+    art: "scorpion",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-desert",
+  },
+  {
+    id: "camel",
+    name: "Camel",
+    baseRarity: "legendary",
+    effect: {
+      coinMult: 2.5,
+      abilityIntervalMs: 60_000,
+      abilityKind: "auto-coins",
+      abilityPayload: 5000,
+    },
+    flavor: "+150% coins. Stores up 5,000 coins every minute.",
+    art: "camel",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-desert",
+  },
+  {
+    id: "fennec-fox",
+    name: "Fennec Fox",
+    baseRarity: "mythic",
+    effect: {
+      coinMult: 1.5,
+      xpMult: 1.5,
+      abilityIntervalMs: 5 * 60_000,
+      abilityKind: "fennec-borrow",
+      abilityPayload: 10_000,
+    },
+    flavor:
+      "Every 5 minutes, borrows the strongest equipped pet's effect for 10 seconds.",
+    art: "fennec-fox",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-desert",
+  },
+
+  // ---- OCEAN EGG ----
+  {
+    id: "fish",
+    name: "Fish",
+    baseRarity: "common",
+    effect: { coinMult: 1.12 },
+    flavor: "+12% coins. Bait for sharks.",
+    art: "fish",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-ocean",
+  },
+  {
+    id: "sea-horse",
+    name: "Sea Horse",
+    baseRarity: "uncommon",
+    effect: { xpMult: 1.18, rollSpeedMult: 0.9 },
+    flavor: "+18% XP and slightly faster rolls.",
+    art: "sea-horse",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-ocean",
+  },
+  {
+    id: "starfish",
+    name: "Starfish",
+    baseRarity: "epic",
+    effect: { rarityTilt: 0.3, coinMult: 1.4, xpMult: 1.4 },
+    flavor: "+0.3 rarity tilt, +40% coins, +40% XP.",
+    art: "starfish",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-ocean",
+  },
+  {
+    id: "shark",
+    name: "Shark",
+    baseRarity: "legendary",
+    effect: {
+      coinMult: 1.5,
+      abilityIntervalMs: 60_000,
+      abilityKind: "shark-eats-fish",
+      abilityPayload: 6250, // average payout
+    },
+    flavor: "+50% coins. Every 60s, eats a fish for 5–7.5k coins.",
+    art: "shark",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-ocean",
+  },
+  {
+    id: "blue-whale",
+    name: "Blue Whale",
+    baseRarity: "mythic",
+    effect: {
+      xpMult: 1.5,
+      coinMult: 1.5,
+      abilityIntervalMs: 30 * 60_000,
+      abilityKind: "blue-whale",
+      abilityPayload: 10_000,
+    },
+    flavor:
+      "Every 30 min: eats a Fish for 10k XP (scaling with level), or eats gems if no Fish.",
+    art: "blue-whale",
+    costCoins: 0,
+    costGems: 0,
+    source: "egg",
+    fromEgg: "egg-ocean",
+  },
+
+  // ============================================================
+  // ============== UNOBTAINABLE / SPECIAL =======================
+  // ============================================================
   {
     id: "cosmic-serpent",
     name: "Cosmic Serpent",
@@ -281,10 +647,12 @@ export const PETS: PetDef[] = [
       rarityTilt: 1,
       rollSpeedMult: 0.5,
     },
-    flavor: "Bends the cosmos. Drops only from the rarest events.",
+    flavor: "Bends the cosmos. Awarded by the Cosmic Ascent quest.",
     art: "cosmic-serpent",
     costCoins: 0,
     costGems: 0,
+    source: "special",
+    unobtainable: true,
   },
   {
     id: "cybernetic-dragon",
@@ -296,11 +664,71 @@ export const PETS: PetDef[] = [
       rarityTilt: 2,
       rollSpeedMult: 0.4,
     },
-    flavor:
-      "Reality-warping. Burns away common rolls and lets only the rare survive.",
+    flavor: "Reality-warping. Awarded by Beyond the Curve.",
     art: "cybernetic-dragon",
     costCoins: 0,
     costGems: 0,
+    source: "special",
+    unobtainable: true,
+  },
+  {
+    id: "developer-monkey",
+    name: "Developer Monkey",
+    baseRarity: "unobtainable",
+    effect: {
+      coinMult: 3,
+      xpMult: 3,
+      rarityTilt: 0.5,
+      rollSpeedMult: 0.5,
+      abilityIntervalMs: 10_000,
+      abilityKind: "dev-monkey-roll",
+    },
+    flavor: "Auto-rolls every 10s and triples every stat.",
+    art: "developer-monkey",
+    costCoins: 0,
+    costGems: 0,
+    source: "special",
+    unobtainable: true,
+  },
+  {
+    id: "scaly-demon",
+    name: "Scaly Demon",
+    baseRarity: "unobtainable",
+    effect: {
+      coinMult: 2,
+      xpMult: 2,
+      rarityTilt: 0.3,
+      abilityIntervalMs: 15 * 60_000,
+      abilityKind: "scaly-eat",
+    },
+    flavor:
+      "Every 15 min: eats a random shop pet under epic, refunding its cost. Levels up that pet. Levels up every owned pet every 30 min.",
+    art: "scaly-demon",
+    costCoins: 0,
+    costGems: 0,
+    source: "special",
+    unobtainable: true,
+  },
+  {
+    id: "megalodon",
+    name: "Megalodon",
+    baseRarity: "unobtainable",
+    effect: {
+      coinMult: 4,
+      xpMult: 4,
+      rarityTilt: 0.5,
+      rollSpeedMult: 0.7,
+      abilityIntervalMs: 90_000,
+      abilityKind: "megalodon-eats-fish",
+      abilityPayload: 30, // average fish eaten per ability
+    },
+    flavor:
+      "Doubles every stat. Every 90s eats 10–50 fish for 1–5k coins each.",
+    art: "megalodon",
+    costCoins: 0,
+    costGems: 0,
+    source: "special",
+    unobtainable: true,
   },
 ];
 
@@ -320,6 +748,11 @@ export const PET_BY_ID: Record<string, PetDef> = PETS.reduce(
   {} as Record<string, PetDef>,
 );
 
+/** Pets sold in the regular shop (no source set, or source==="shop"). */
+export const SHOP_PETS: PetDef[] = PETS.filter(
+  (p) => !p.source || p.source === "shop",
+).filter((p) => p.baseRarity !== "unobtainable");
+
 // Pet drop divisors per rarity tier
 const PET_DIVISOR: Record<RarityKey, number> = {
   common: 0,
@@ -328,7 +761,7 @@ const PET_DIVISOR: Record<RarityKey, number> = {
   epic: 100,
   legendary: 1000,
   mythic: 10000,
-  unobtainable: 0, // unobtainable pets only drop via specific achievements
+  unobtainable: 0,
 };
 
 export function rollPetDrop(
@@ -340,9 +773,8 @@ export function rollPetDrop(
   if (!divisor) return null;
   const dropChance = tierProb / divisor;
   if (Math.random() > dropChance) return null;
-  const tierPets = PETS.filter(
-    (p) => p.baseRarity === tier && p.baseRarity !== "unobtainable",
-  );
+  // Only drop pets that are sold in the shop (excludes egg-exclusives & specials).
+  const tierPets = SHOP_PETS.filter((p) => p.baseRarity === tier);
   if (tierPets.length === 0) return null;
   const unowned = tierPets.filter((p) => !ownedIds.has(p.id));
   const pool = unowned.length > 0 ? unowned : tierPets;
@@ -351,51 +783,43 @@ export function rollPetDrop(
 
 // ---- Evolution & upgrade math ----
 
-/** Returns the current rarity bracket of a pet given its level. */
 export function petCurrentRarity(def: PetDef, petLevel: number): RarityKey {
   if (def.baseRarity === "unobtainable") return "unobtainable";
   const lv = Math.max(1, petLevel);
-  if (lv >= 51) return "mythic";
-  if (lv >= 41) return "legendary";
-  if (lv >= 31) return "epic";
-  if (lv >= 21) return "rare";
-  if (lv >= 11) return "uncommon";
+  if (lv >= TIER_LEVEL_START.mythic) return "mythic";
+  if (lv >= TIER_LEVEL_START.legendary) return "legendary";
+  if (lv >= TIER_LEVEL_START.epic) return "epic";
+  if (lv >= TIER_LEVEL_START.rare) return "rare";
+  if (lv >= TIER_LEVEL_START.uncommon) return "uncommon";
   return "common";
 }
 
-/** Total effect multiplier scale = product of evolution boosts + per-level bonus. */
 function petEffectScale(def: PetDef, petLevel: number): number {
   if (def.baseRarity === "unobtainable") return 1;
   const cur = petCurrentRarity(def, petLevel);
   let scale = 1;
-  // Apply each evolution boost from baseRarity → cur.
   const baseIdx = NORMAL_TIERS.indexOf(def.baseRarity);
   const curIdx = NORMAL_TIERS.indexOf(cur);
   for (let i = baseIdx + 1; i <= curIdx; i++) {
     const boost = EVOLUTION_BOOST[NORMAL_TIERS[i]] ?? 0;
     scale *= 1 + boost;
   }
-  // Add per-level bonus inside current tier.
   const tierStart = TIER_LEVEL_START[cur];
   const levelsInTier = Math.max(0, petLevel - tierStart);
   scale *= 1 + levelsInTier * PER_LEVEL_BONUS;
   return scale;
 }
 
-/** Effective effect after applying evolution + per-level scaling. */
 export function effectiveEffect(
   def: PetDef,
   petLevel: number,
-): Required<PetEffect> {
+): Required<Pick<PetEffect, "coinMult" | "xpMult" | "rarityTilt" | "rollSpeedMult">> {
   const scale = petEffectScale(def, petLevel);
   const e = def.effect;
-  // Bonuses scale; multiplicative buffs become 1 + (mult-1)*scale.
-  const scaleBonus = (m?: number) =>
-    m == null ? 1 : 1 + (m - 1) * scale;
-  // Roll speed: lower is better. Convert to "speed bonus" and scale.
+  const scaleBonus = (m?: number) => (m == null ? 1 : 1 + (m - 1) * scale);
   const scaleSpeed = (m?: number) => {
     if (m == null) return 1;
-    const speedBonus = 1 - m; // e.g. 0.5 → 0.5 bonus
+    const speedBonus = 1 - m;
     const newBonus = Math.min(0.95, speedBonus * scale);
     return 1 - newBonus;
   };
@@ -407,7 +831,6 @@ export function effectiveEffect(
   };
 }
 
-/** Requirement to evolve from current tier to next. */
 export function evolutionInfo(
   def: PetDef,
   inst: PetInstance,
@@ -415,8 +838,8 @@ export function evolutionInfo(
 ): {
   cur: RarityKey;
   next: RarityKey | null;
-  petLevelNeeded: number; // pet must reach this level
-  playerLevelNeeded: number; // player must be ≥ this
+  petLevelNeeded: number;
+  playerLevelNeeded: number;
   ready: boolean;
   maxed: boolean;
 } {
@@ -440,11 +863,11 @@ export function evolutionInfo(
       petLevelNeeded: 0,
       playerLevelNeeded: 0,
       ready: false,
-      maxed: true,
+      maxed: inst.level >= MAX_PET_LEVEL,
     };
   }
   const petLevelNeeded = TIER_LEVEL_START[nextTier];
-  const playerLevelNeeded = (curIdx + 1) * 10; // to uncommon need 10+, rare need 20+, etc.
+  const playerLevelNeeded = (curIdx + 1) * 10;
   const ready =
     inst.level >= petLevelNeeded - 1 && playerLevel >= playerLevelNeeded;
   return {
@@ -457,15 +880,32 @@ export function evolutionInfo(
   };
 }
 
-/** Cost in coins to bump a pet from level → level+1. */
-export function petUpgradeCost(def: PetDef, currentPetLevel: number): number {
-  // Base cost scales with pet level and base rarity tier.
-  const tierMult = Math.pow(3, RARITY_RANK[def.baseRarity]); // common=1, uncommon=3, rare=9...
-  return Math.floor(50 * tierMult * Math.pow(currentPetLevel, 1.5));
+/**
+ * Cost to upgrade pet from currentPetLevel to currentPetLevel+1.
+ * Below or at level 50 → costs coins. Above 50 → costs gems instead.
+ */
+export function petUpgradeCost(
+  def: PetDef,
+  currentPetLevel: number,
+): { coins: number; gems: number } {
+  const next = currentPetLevel + 1;
+  const tierMult = Math.pow(3, RARITY_RANK[def.baseRarity]);
+  if (next > PET_GEM_LEVEL_THRESHOLD) {
+    // Gem cost ramps slowly past 50
+    const overflow = next - PET_GEM_LEVEL_THRESHOLD;
+    // base 2 gems, adds 1 every 5 levels, scaled by rarity tier
+    const gems = Math.max(
+      1,
+      Math.floor((2 + Math.floor(overflow / 5)) * Math.max(1, tierMult / 3)),
+    );
+    return { coins: 0, gems };
+  }
+  const coins = Math.floor(50 * tierMult * Math.pow(currentPetLevel, 1.5));
+  return { coins, gems: 0 };
 }
 
 export function isPetMaxed(def: PetDef, petLevel: number): boolean {
-  if (def.baseRarity === "unobtainable") return true;
+  if (def.baseRarity === "unobtainable" || def.unobtainable) return true;
   return petLevel >= MAX_PET_LEVEL;
 }
 

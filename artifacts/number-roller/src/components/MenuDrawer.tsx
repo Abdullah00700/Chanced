@@ -10,9 +10,11 @@ type MenuItem = {
 
 const PAGE_ITEMS: MenuItem[] = [
   { key: "roll", label: "Roll", icon: "◎", hint: "Spin the curve" },
-  { key: "shop", label: "Shop", icon: "▲", hint: "Upgrades & boosters" },
-  { key: "pets", label: "Pets", icon: "✦", hint: "Collect & equip" },
-  { key: "pets", label: "Inventory", icon: "▢", hint: "Your owned pets" },
+  { key: "shop", label: "Shop", icon: "▲", hint: "Upgrades, boosters, eggs, rebirth" },
+  { key: "inventory", label: "Inventory", icon: "▢", hint: "Pets · eggs · upgrade pets" },
+  { key: "quests", label: "Quests", icon: "✎", hint: "Daily · weekly · special" },
+  { key: "events", label: "Events", icon: "❉", hint: "Weather effects" },
+  { key: "pets", label: "Pets · Equip", icon: "✦", hint: "Manage equipped slots" },
   { key: "achievements", label: "Achievements", icon: "★", hint: "Trophies" },
   { key: "leaderboard", label: "Leaderboard", icon: "≡", hint: "Rarest rolls" },
 ];
@@ -50,7 +52,6 @@ export function MenuDrawer({
       }
       aria-hidden={!open}
     >
-      {/* Scrim */}
       <div
         onClick={onClose}
         className={
@@ -58,8 +59,6 @@ export function MenuDrawer({
           (open ? "opacity-100" : "opacity-0")
         }
       />
-
-      {/* Drawer */}
       <aside
         className={
           "absolute right-0 top-0 flex h-full w-72 max-w-[85vw] flex-col border-l border-zinc-800/80 bg-[#0b0c14] shadow-2xl transition-transform duration-200 ease-out " +

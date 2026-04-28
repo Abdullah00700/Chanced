@@ -1,14 +1,7 @@
 import { useMemo, useState } from "react";
 import { PetArt } from "../components/PetArt";
 import { formatNumber } from "../lib/format";
-import {
-  effectiveEffect,
-  evolutionInfo,
-  isPetMaxed,
-  petCurrentRarity,
-  petUpgradeCost,
-  PETS,
-} from "../lib/pets";
+import { petCurrentRarity, PETS } from "../lib/pets";
 import { isGradientRarity, RARITY_BY_KEY } from "../lib/rarity";
 import type { Profile, RarityKey } from "../lib/types";
 
@@ -27,14 +20,12 @@ export function PetsView({
   profile,
   onEquip,
   onBuyPet,
-  onUpgradePet,
   onBuyExtraSlot,
   extraSlotCost,
 }: {
   profile: Profile;
   onEquip: (id: string | null, slot?: number) => void;
   onBuyPet: (id: string) => void;
-  onUpgradePet: (id: string) => void;
   onBuyExtraSlot: () => void;
   extraSlotCost: (currentExtra: number) => number;
 }) {
@@ -124,6 +115,11 @@ export function PetsView({
         )}
       </div>
 
+      <div className="rounded-xl border border-zinc-800/70 bg-zinc-950/40 p-2.5 text-[10px] text-zinc-500">
+        Tip: Pet upgrades and ability cooldowns are managed in the{" "}
+        <span className="font-bold text-zinc-300">Inventory</span> tab.
+      </div>
+
       {/* Filter chips */}
       <RarityFilter value={filter} onChange={setFilter} />
 
@@ -136,15 +132,15 @@ export function PetsView({
           const r = RARITY_BY_KEY[curRarity];
           const canAffordBuy =
             profile.coins >= p.costCoins && profile.gems >= p.costGems;
+          const isShopBuyable =
+            !owned && p.source !== "egg" && p.source !== "special";
 
           return (
             <div
               key={p.id}
               className={
                 "rounded-xl border bg-zinc-950/60 p-3 " +
-                (owned
-                  ? "border-amber-500/20"
-                  : "border-zinc-800")
+                (owned ? "border-amber-500/20" : "border-zinc-800")
               }
             >
               <div className="flex items-center gap-3">
@@ -184,11 +180,15 @@ export function PetsView({
                     >
                       {isEquipped ? "Equipped" : "Equip"}
                     </button>
-                  ) : p.baseRarity === "unobtainable" ? (
+                  ) : p.source === "special" ? (
                     <span className="rounded-md border border-rose-500/40 bg-rose-500/10 px-2 py-1.5 text-[10px] font-bold text-rose-300">
-                      ACHIEVEMENT
+                      SPECIAL
                     </span>
-                  ) : (
+                  ) : p.source === "egg" ? (
+                    <span className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1.5 text-[10px] font-bold text-cyan-300">
+                      EGG-ONLY
+                    </span>
+                  ) : isShopBuyable ? (
                     <button
                       onClick={() => onBuyPet(p.id)}
                       disabled={!canAffordBuy}
@@ -206,20 +206,9 @@ export function PetsView({
                         </span>
                       )}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
-
-              {/* Owned pet upgrade panel */}
-              {owned && (
-                <UpgradePanel
-                  petId={p.id}
-                  petLevel={inst!.level}
-                  playerLevel={profile.level}
-                  coins={profile.coins}
-                  onUpgrade={() => onUpgradePet(p.id)}
-                />
-              )}
             </div>
           );
         })}
@@ -281,7 +270,7 @@ function ExtraSlotBuy({
   onBuy: () => void;
 }) {
   const canAfford = gems >= cost;
-  const slotNumber = currentExtra + 2; // showing slot we'd unlock (2 or 3)
+  const slotNumber = currentExtra + 2;
   return (
     <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-violet-500/30 bg-violet-500/5 p-2">
       <div className="min-w-0">
@@ -304,132 +293,6 @@ function ExtraSlotBuy({
       >
         {cost}✦
       </button>
-    </div>
-  );
-}
-
-function UpgradePanel({
-  petId,
-  petLevel,
-  playerLevel,
-  coins,
-  onUpgrade,
-}: {
-  petId: string;
-  petLevel: number;
-  playerLevel: number;
-  coins: number;
-  onUpgrade: () => void;
-}) {
-  const def = PETS.find((p) => p.id === petId)!;
-  const maxed = isPetMaxed(def, petLevel);
-  const ev = evolutionInfo(def, { ownedAt: 0, level: petLevel }, playerLevel);
-  const cost = maxed ? 0 : petUpgradeCost(def, petLevel);
-  const canAfford = !maxed && coins >= cost;
-  const currentEff = effectiveEffect(def, petLevel);
-  const nextEff = maxed ? currentEff : effectiveEffect(def, petLevel + 1);
-
-  // Block upgrades when reaching the next-tier threshold without meeting
-  // player level requirement (the level-cap before evolution).
-  const blocksAtTierEnd =
-    !maxed &&
-    !ev.maxed &&
-    ev.next != null &&
-    petLevel + 1 >= ev.petLevelNeeded &&
-    playerLevel < ev.playerLevelNeeded;
-
-  return (
-    <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-2.5">
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-zinc-500">
-        <span>Upgrade slot</span>
-        <span className="text-zinc-400">Pet LV {petLevel} → {petLevel + 1}</span>
-      </div>
-      <div className="mt-1 grid grid-cols-2 gap-2 text-[10px]">
-        <Stat label="Coin mult" cur={currentEff.coinMult} next={nextEff.coinMult} unit="×" />
-        <Stat label="XP mult" cur={currentEff.xpMult} next={nextEff.xpMult} unit="×" />
-        <Stat
-          label="Rarity tilt"
-          cur={currentEff.rarityTilt}
-          next={nextEff.rarityTilt}
-          unit=""
-          deltaPos
-        />
-        <Stat
-          label="Roll speed"
-          cur={currentEff.rollSpeedMult}
-          next={nextEff.rollSpeedMult}
-          unit="×"
-          inverse
-        />
-      </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        {maxed ? (
-          <div className="text-[10px] font-bold text-amber-300">
-            MAX EVOLUTION
-          </div>
-        ) : blocksAtTierEnd ? (
-          <div className="text-[10px] text-rose-300">
-            Reach player LV {ev.playerLevelNeeded} to evolve to {ev.next?.toUpperCase()}
-          </div>
-        ) : ev.next && petLevel + 1 === ev.petLevelNeeded ? (
-          <div className="text-[10px] font-bold text-emerald-300">
-            ⚡ Next upgrade EVOLVES → {ev.next.toUpperCase()}
-          </div>
-        ) : (
-          <div className="text-[10px] text-zinc-500">+0.5% per level</div>
-        )}
-        <button
-          onClick={onUpgrade}
-          disabled={maxed || !canAfford || blocksAtTierEnd}
-          className={
-            "shrink-0 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold " +
-            (maxed || blocksAtTierEnd
-              ? "bg-zinc-800 text-zinc-500"
-              : canAfford
-                ? "bg-emerald-500 text-zinc-950 active:bg-emerald-600"
-                : "bg-zinc-800 text-zinc-500")
-          }
-        >
-          {maxed ? "MAX" : `${formatNumber(cost)}◎`}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  cur,
-  next,
-  unit,
-  inverse,
-  deltaPos,
-}: {
-  label: string;
-  cur: number;
-  next: number;
-  unit: string;
-  inverse?: boolean;
-  deltaPos?: boolean;
-}) {
-  const better = inverse ? next < cur : next > cur;
-  const fmt = (v: number) =>
-    deltaPos ? v.toFixed(2) : (Math.round(v * 1000) / 1000).toFixed(3);
-  return (
-    <div className="flex items-center justify-between rounded-md bg-zinc-950/50 px-1.5 py-1 text-zinc-300">
-      <span className="text-[9px] uppercase tracking-widest text-zinc-500">
-        {label}
-      </span>
-      <span className="font-mono">
-        {fmt(cur)}
-        {unit}
-        {Math.abs(next - cur) > 0.0005 && (
-          <span className={"ml-1 " + (better ? "text-emerald-400" : "text-zinc-500")}>
-            → {fmt(next)}
-            {unit}
-          </span>
-        )}
-      </span>
     </div>
   );
 }
