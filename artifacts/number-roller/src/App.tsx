@@ -4,6 +4,11 @@ import {
   type ToastItem,
 } from "./components/AchievementToast";
 import { AuthModal } from "./components/AuthModal";
+import {
+  apiGetLeaderboard,
+  apiSubmitLeader,
+  apiSyncProfile,
+} from "./lib/api";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { MenuDrawer } from "./components/MenuDrawer";
@@ -63,12 +68,9 @@ import {
 import {
   emptyProfile,
   loadAccounts,
-  loadLeaderboard,
   LS_ACTIVE,
   LS_MUTED,
   saveAccounts,
-  saveLeaderboard,
-  upsertLeader,
 } from "./lib/storage";
 import {
   isMuted,
@@ -126,14 +128,42 @@ export default function App() {
   }, [muted]);
   void isMuted;
 
-  // ---- Leaderboard ----
-  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>(() =>
-    loadLeaderboard(),
-  );
-  useEffect(() => saveLeaderboard(leaderboard), [leaderboard]);
+  // ---- Leaderboard (global, fetched from API) ----
+  const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const entries = await apiGetLeaderboard();
+        if (!cancelled) setLeaderboard(entries);
+      } catch {
+        // ignore — keep what we have
+      }
+    }
+    void refresh();
+    const id = window.setInterval(refresh, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
 
   // ---- Active profile ----
   const profile = activeUser ? accounts[activeUser] ?? null : null;
+
+  // ---- Cloud sync: push the active profile to the server, debounced ----
+  useEffect(() => {
+    if (!profile) return;
+    const username = profile.username;
+    const passwordHash = profile.passwordHash;
+    const snapshot = profile;
+    const id = window.setTimeout(() => {
+      void apiSyncProfile(username, passwordHash, snapshot).catch(() => {
+        // ignore — local cache still holds the latest
+      });
+    }, 800);
+    return () => window.clearTimeout(id);
+  }, [profile]);
 
   function persistAccounts(next: Record<string, Profile>) {
     setAccountsState(next);
@@ -378,18 +408,20 @@ export default function App() {
         mythicStreak: nextMythicStreak,
       });
 
-      // Leaderboard
-      if (result.prob < 0.001) {
-        setLeaderboard((lb) =>
-          upsertLeader(lb, {
-            username: profile!.username,
-            number: n,
-            prob: result.prob,
-            rarity: result.rarity,
-            level: profile!.level,
-            timestamp: Date.now(),
-          }),
-        );
+      // Leaderboard — submit to cloud and refresh
+      if (result.prob < 0.001 && profile) {
+        const entry = {
+          number: n,
+          prob: result.prob,
+          rarity: result.rarity,
+          level: profile.level,
+        };
+        void apiSubmitLeader(profile.username, profile.passwordHash, entry)
+          .then(() => apiGetLeaderboard())
+          .then((entries) => setLeaderboard(entries))
+          .catch(() => {
+            // ignore
+          });
       }
 
       // Effects
@@ -991,20 +1023,11 @@ export default function App() {
   }, [now, activeUser]);
 
   // ---- Auth handlers ----
-  function handleSignup(p: Profile) {
+  function handleAuthed(p: Profile, passwordHash: string) {
+    // Cloud profile is authoritative; ensure local hash matches the one we used to sign in.
+    const merged: Profile = { ...p, passwordHash };
     const key = p.username.toLowerCase();
-    const next = { ...accounts, [key]: p };
-    persistAccounts(next);
-    setActiveUser(key);
-    localStorage.setItem(LS_ACTIVE, key);
-  }
-  function handleLogin(key: string) {
-    setActiveUser(key);
-    localStorage.setItem(LS_ACTIVE, key);
-  }
-  function handleLoadFromCode(p: Profile) {
-    const key = p.username.toLowerCase();
-    const next = { ...accounts, [key]: p };
+    const next = { ...accounts, [key]: merged };
     persistAccounts(next);
     setActiveUser(key);
     localStorage.setItem(LS_ACTIVE, key);
@@ -1030,12 +1053,7 @@ export default function App() {
   if (!profile) {
     return (
       <div className="min-h-dvh">
-        <AuthModal
-          accounts={accounts}
-          onLogin={handleLogin}
-          onSignup={handleSignup}
-          onLoadFromCode={handleLoadFromCode}
-        />
+        <AuthModal onAuthed={handleAuthed} />
       </div>
     );
   }

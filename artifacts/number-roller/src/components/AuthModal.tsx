@@ -1,21 +1,16 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
+import { apiLogin, apiSignup } from "../lib/api";
 import { decodeSave } from "../lib/save";
-import { sha256 } from "../lib/storage";
+import { emptyProfile, sha256 } from "../lib/storage";
 import type { Profile } from "../lib/types";
 
 type Mode = "login" | "signup" | "code";
 
 export function AuthModal({
-  accounts,
-  onLogin,
-  onSignup,
-  onLoadFromCode,
+  onAuthed,
 }: {
-  accounts: Record<string, Profile>;
-  onLogin: (username: string) => void;
-  onSignup: (profile: Profile) => void;
-  onLoadFromCode: (profile: Profile, password: string) => void;
+  onAuthed: (profile: Profile, passwordHash: string) => void;
 }) {
   // Always default to signup so new players are prompted to register.
   // Existing users can switch to the Login tab.
@@ -37,17 +32,20 @@ export function AuthModal({
           setErr("Enter your username.");
           return;
         }
-        const acc = accounts[u.toLowerCase()];
-        if (!acc) {
-          setErr("No account with that username.");
+        if (password.length < 1) {
+          setErr("Enter your password.");
           return;
         }
         const hash = await sha256(password);
-        if (hash !== acc.passwordHash) {
-          setErr("Wrong password.");
-          return;
+        try {
+          const profile = await apiLogin(u, hash);
+          onAuthed(profile, hash);
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (msg === "no account") setErr("No account with that username.");
+          else if (msg === "wrong password") setErr("Wrong password.");
+          else setErr("Couldn't sign in. Check your connection and try again.");
         }
-        onLogin(u.toLowerCase());
         return;
       }
       if (mode === "signup") {
@@ -56,18 +54,20 @@ export function AuthModal({
           setErr("2–16 chars: letters, numbers, _ or -");
           return;
         }
-        if (accounts[u.toLowerCase()]) {
-          setErr("Username already taken.");
-          return;
-        }
         if (password.length < 4) {
           setErr("Password must be at least 4 characters.");
           return;
         }
         const hash = await sha256(password);
-        const { emptyProfile } = await import("../lib/storage");
         const profile = emptyProfile(u, hash);
-        onSignup(profile);
+        try {
+          const created = await apiSignup(u, hash, profile);
+          onAuthed(created, hash);
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (msg === "username taken") setErr("Username already taken.");
+          else setErr("Couldn't create account. Try again.");
+        }
         return;
       }
       if (mode === "code") {
@@ -85,7 +85,25 @@ export function AuthModal({
           setErr("Wrong password for this save code.");
           return;
         }
-        onLoadFromCode(decoded, password);
+        // Try to log in to existing cloud account; if missing, create it from the code.
+        try {
+          const remote = await apiLogin(decoded.username, hash);
+          onAuthed(remote, hash);
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (msg === "no account") {
+            try {
+              const created = await apiSignup(decoded.username, hash, decoded);
+              onAuthed(created, hash);
+            } catch (e2) {
+              setErr("Couldn't restore account from code.");
+            }
+          } else if (msg === "wrong password") {
+            setErr("Password doesn't match the cloud account for this name.");
+          } else {
+            setErr("Couldn't reach the server. Try again.");
+          }
+        }
         return;
       }
     } finally {
@@ -166,14 +184,16 @@ export function AuthModal({
           disabled={busy}
           className="mt-1 rounded-lg bg-gradient-to-b from-amber-400 to-orange-500 px-4 py-2.5 text-sm font-extrabold text-zinc-950 shadow-md active:scale-[0.99] disabled:opacity-60"
         >
-          {mode === "login"
-            ? "Log in"
-            : mode === "signup"
-              ? "Create account"
-              : "Load save"}
+          {busy
+            ? "Please wait…"
+            : mode === "login"
+              ? "Log in"
+              : mode === "signup"
+                ? "Create account"
+                : "Load save"}
         </button>
         <p className="mt-1 text-center text-[10px] text-zinc-500">
-          Accounts are stored only on this device. Save codes let you back up.
+          Accounts sync to the cloud so you can play across devices.
         </p>
       </div>
     </Modal>
