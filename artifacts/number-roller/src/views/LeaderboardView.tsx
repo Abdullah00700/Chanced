@@ -9,10 +9,13 @@ export function LeaderboardView({
   entries: LeaderEntry[];
   currentUser: string;
 }) {
-  if (entries.length === 0) {
+  // Sort by level descending (highest level = top of board)
+  const sorted = [...entries].sort((a, b) => b.level - a.level);
+
+  if (sorted.length === 0) {
     return (
       <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 text-center text-sm text-zinc-500">
-        No entries yet. Roll something rare to claim a spot.
+        No entries yet. Play and level up to claim a spot!
       </div>
     );
   }
@@ -20,12 +23,15 @@ export function LeaderboardView({
   return (
     <div className="flex flex-col gap-2 pb-4">
       <h2 className="text-[11px] font-extrabold tracking-[0.22em] text-zinc-400">
-        RAREST ROLLS
+        TOP PLAYERS BY LEVEL
       </h2>
-      {entries.map((e, i) => {
+      {sorted.map((e, i) => {
         const r = RARITY_BY_KEY[e.rarity];
         const isMe = e.username.toLowerCase() === currentUser.toLowerCase();
         const isGradient = isGradientRarity(e.rarity);
+        const rank = i + 1;
+        const rankColor =
+          rank === 1 ? "text-amber-300" : rank === 2 ? "text-zinc-300" : rank === 3 ? "text-amber-600" : "text-zinc-500";
         return (
           <div
             key={e.username + e.timestamp}
@@ -36,8 +42,8 @@ export function LeaderboardView({
                 : "border-zinc-800 bg-zinc-950/60")
             }
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-extrabold text-zinc-300">
-              {i + 1}
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-extrabold ${rankColor}`}>
+              {rank === 1 ? "★" : rank === 2 ? "☆" : rank === 3 ? "▲" : rank}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
@@ -49,7 +55,7 @@ export function LeaderboardView({
                 </span>
               </div>
               <div className="text-[10px] text-zinc-500">
-                {chancePctFromProb(e.prob)} chance
+                Best roll: {chancePctFromProb(e.prob)} chance
               </div>
             </div>
             <div className="text-right">

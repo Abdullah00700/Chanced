@@ -32,7 +32,6 @@ export type QuestsState = {
   weeklyProgress: QuestProgressMap;
   weeklyClaimed: QuestClaimMap;
   weeklyRefreshAt: number;
-  /** Counters for special quests (monkey-max-level, scaly legendary rolls, shark mythic rolls). */
   specialProgress: QuestProgressMap;
 };
 
@@ -41,6 +40,28 @@ export type WeatherState = {
   activeUntil: number;
   nextAutoAt: number;
   manualCooldownUntil: number;
+};
+
+export type ActiveBossFight = {
+  bossId: string;
+  playerHp: number;
+  playerMaxHp: number;
+  bossHp: number;
+  bossMaxHp: number;
+  startedAt: number;
+  lastMoveId: string | null;
+  lastMoveName: string | null;
+  lastMoveDamage: number;
+  lastMoveAt: number;
+  totalDamageDealt: number;
+  rollsDone: number;
+};
+
+export type CorruptedRoll = {
+  number: number;
+  distance: number;
+  drainPerTick: number;
+  lastDrainAt: number;
 };
 
 export type Profile = {
@@ -66,16 +87,10 @@ export type Profile = {
 
   upgrades: { coin: number; rarity: number };
   pets: Record<string, PetInstance>;
-  /**
-   * Up to 3 pet slots. Index 0 is always available; slots 1 and 2 are
-   * unlocked by purchasing extra slots with gems (see `extraSlots`).
-   */
   equippedPets: (string | null)[];
-  /** Number of extra slots purchased (0-2). Total slots = 1 + extraSlots. */
   extraSlots: number;
   achievements: Record<string, number>;
 
-  // Tracks consecutive mythic rolls for the special achievement.
   mythicStreak: number;
 
   boosters: {
@@ -84,19 +99,22 @@ export type Profile = {
     xpUntil: number;
   };
 
-  // Eggs in inventory (id -> count owned, unhatched).
   eggs: Record<string, number>;
-  // Currently hatching slot (one at a time).
   hatch: ActiveHatch | null;
 
-  // Per-pet next ability trigger timestamps.
   petAbilityNext: Record<string, number>;
 
   quests: QuestsState;
   weather: WeatherState;
 
+  defeatedBosses: string[];
+  activeBoss: ActiveBossFight | null;
+  bossKills: number;
+
+  corruptedRoll: CorruptedRoll | null;
+
   createdAt: number;
-  schemaVersion: 4;
+  schemaVersion: 5;
 };
 
 export type LeaderEntry = {
@@ -118,5 +136,6 @@ export type RollResult = {
   baseXp: number;
   xpMult: number;
   xpEarned: number;
+  gemsEarned: number;
   petDropped: string | null;
 };

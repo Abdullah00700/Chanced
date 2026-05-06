@@ -1,5 +1,7 @@
 import type {
+  ActiveBossFight,
   ActiveHatch,
+  CorruptedRoll,
   LeaderEntry,
   PetInstance,
   Profile,
@@ -96,6 +98,38 @@ function migrateHatch(raw: any): ActiveHatch | null {
   };
 }
 
+function migrateActiveBoss(raw: any): ActiveBossFight | null {
+  const b = raw?.activeBoss;
+  if (!b || typeof b !== "object") return null;
+  if (typeof b.bossId !== "string") return null;
+  return {
+    bossId: b.bossId,
+    playerHp: typeof b.playerHp === "number" ? b.playerHp : 1000,
+    playerMaxHp: typeof b.playerMaxHp === "number" ? b.playerMaxHp : 1000,
+    bossHp: typeof b.bossHp === "number" ? b.bossHp : 0,
+    bossMaxHp: typeof b.bossMaxHp === "number" ? b.bossMaxHp : 0,
+    startedAt: typeof b.startedAt === "number" ? b.startedAt : Date.now(),
+    lastMoveId: typeof b.lastMoveId === "string" ? b.lastMoveId : null,
+    lastMoveName: typeof b.lastMoveName === "string" ? b.lastMoveName : null,
+    lastMoveDamage: typeof b.lastMoveDamage === "number" ? b.lastMoveDamage : 0,
+    lastMoveAt: typeof b.lastMoveAt === "number" ? b.lastMoveAt : 0,
+    totalDamageDealt: typeof b.totalDamageDealt === "number" ? b.totalDamageDealt : 0,
+    rollsDone: typeof b.rollsDone === "number" ? b.rollsDone : 0,
+  };
+}
+
+function migrateCorruptedRoll(raw: any): CorruptedRoll | null {
+  const c = raw?.corruptedRoll;
+  if (!c || typeof c !== "object") return null;
+  if (typeof c.number !== "number") return null;
+  return {
+    number: c.number,
+    distance: typeof c.distance === "number" ? c.distance : 0,
+    drainPerTick: typeof c.drainPerTick === "number" ? c.drainPerTick : 0,
+    lastDrainAt: typeof c.lastDrainAt === "number" ? c.lastDrainAt : Date.now(),
+  };
+}
+
 function migrateProfile(raw: any): Profile {
   const rollsByRarity = { ...(raw.rollsByRarity ?? {}) } as Record<
     RarityKey,
@@ -119,6 +153,10 @@ function migrateProfile(raw: any): Profile {
       if (typeof v === "number" && v > 0) eggs[k] = Math.floor(v);
     }
   }
+  const defeatedBosses: string[] = Array.isArray(raw.defeatedBosses)
+    ? raw.defeatedBosses.filter((x: any) => typeof x === "string")
+    : [];
+
   return {
     username: raw.username,
     passwordHash: raw.passwordHash,
@@ -154,8 +192,12 @@ function migrateProfile(raw: any): Profile {
         : {},
     quests: migrateQuests(raw),
     weather: migrateWeather(raw),
+    defeatedBosses,
+    activeBoss: migrateActiveBoss(raw),
+    bossKills: typeof raw.bossKills === "number" ? raw.bossKills : 0,
+    corruptedRoll: migrateCorruptedRoll(raw),
     createdAt: raw.createdAt ?? Date.now(),
-    schemaVersion: 4,
+    schemaVersion: 5,
   };
 }
 
@@ -207,11 +249,22 @@ export function upsertLeader(
   );
   let next = [...entries];
   if (idx >= 0) {
-    if (candidate.prob < next[idx].prob) next[idx] = candidate;
+    // Always update (keep best prob, always update level)
+    if (candidate.prob < next[idx].prob || candidate.level > next[idx].level) {
+      next[idx] = {
+        ...next[idx],
+        prob: Math.min(next[idx].prob, candidate.prob),
+        level: Math.max(next[idx].level, candidate.level),
+        number: candidate.prob <= next[idx].prob ? candidate.number : next[idx].number,
+        rarity: candidate.prob <= next[idx].prob ? candidate.rarity : next[idx].rarity,
+        timestamp: Date.now(),
+      };
+    }
   } else {
     next.push(candidate);
   }
-  next.sort((a, b) => a.prob - b.prob);
+  // Sort by level descending for leaderboard
+  next.sort((a, b) => b.level - a.level);
   return next.slice(0, 50);
 }
 
@@ -278,7 +331,11 @@ export function emptyProfile(
       nextAutoAt: 0,
       manualCooldownUntil: 0,
     },
+    defeatedBosses: [],
+    activeBoss: null,
+    bossKills: 0,
+    corruptedRoll: null,
     createdAt: Date.now(),
-    schemaVersion: 4,
+    schemaVersion: 5,
   };
 }

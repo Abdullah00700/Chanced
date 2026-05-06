@@ -1,47 +1,74 @@
-# Workspace
+# Rarity Roller
 
-## Overview
+A mobile-first idle number-rolling game. Roll 0–10,000, chase rare numbers, collect pets, fight bosses, and prestige through rebirths.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Run & Operate
 
-## Artifacts
+- `pnpm --filter number-roller run dev` (requires `PORT` and `BASE_PATH` env vars)
+- `pnpm --filter @workspace/api-server run dev` — API server
+- `pnpm run typecheck` — full workspace typecheck
+- `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API client from OpenAPI spec
 
-- **Rarity Roller** (`artifacts/number-roller`) — Frontend-only React + Vite mobile-first app at `/`. Schema **v4**. Roll a weighted number 0–10,000 with **7 rarity tiers** (common → … → mythic → **unobtainable**, n=0 or 10,000). Major systems:
-  - **Rebirth** (max 30): cost `100k × 1.4^N` coins; resets coins only; grants permanent stacking ×1.5 coins / ×2 XP / +0.05 rarity tilt per rebirth.
-  - **Pets** (~30, max level **100**, gem cost past lvl 50): tier brackets common 1-15, uncommon 16-30, rare 31-45, epic 46-60, legendary 61-80, mythic 81-100. Penguin has +15% XP. Pet upgrades & ability cooldowns live **only in Inventory** (the Pets/Equip page only handles slot equipping & shop purchases).
-  - **Eggs** (6): common/rare/epic always; jungle (rebirth ≥3), desert (≥5), ocean (≥10). Bought with gems in Shop, hatched in Inventory.
-  - **XP Booster** (Shop): 2× XP for 60 s for 1500 coins; alongside coin & rarity boosters.
-  - **Quests**: ~20 daily + ~20 weekly; 5 random of each, refreshing every 18 h / 7 d. **Special quests** unlock the 5 unobtainable pets (cosmic-serpent, cybernetic-dragon, developer-monkey, scaly-demon, megalodon).
-  - **Weather/Events** (11 types): one auto-triggers every ~10 min, plus on-demand triggers (5 min cooldown) from the Events tab. Effects: coin/xp/rarity/roll-speed; rendered as full-screen overlay + HUD chip.
-  - **5-tab BottomNav**: roll · shop · inventory · quests · events. Pets/Achievements/Leaderboard live in the menu drawer (still keep a "Back to roll" header).
-  - **Pet abilities** ticked each second (only when equipped): hatch-skip, auto-coins/xp, shark/megalodon eat fish, blue-whale XP, scaly-eat refund. Auto-roll abilities are intentionally not implemented.
-  - **Achievements** include evolution thresholds at the new bracket boundaries (16/31/46/61/81), `evolved_pet_epic`, `first_rebirth`, `rebirth_5`, `rebirth_15`. Data cached in `localStorage` (`rr2.*` keys); v3 → v4 auto-migrates.
-  - **Cloud accounts + global leaderboard**: signup/login/profile-sync go through `@workspace/api-server` (`/api/accounts/signup|login|sync`) backed by the Postgres `accounts` table (username PK, password_hash, profile JSONB). The leaderboard is global (`/api/leaderboard` + `/api/leaderboard/submit`, table `leaderboard`). Auth is a SHA-256 client hash sent on every write. Profile sync is debounced (~800 ms) and the leaderboard auto-refreshes every 30 s. `localStorage` still holds an offline cache of the active profile and accounts map.
-
-  Source layout (under `artifacts/number-roller/src`):
-  - `lib/` — types (v4), rarity, distribution, level, rebirth, pets (`MAX_PET_LEVEL=100`, `petCurrentRarity`, `evolutionInfo`, `petUpgradeCost` returning `{coins, gems}`), eggs, weather, quests (`maybeRefreshQuests`, `advanceForRoll`, `bumpDaily/Weekly`, `QUEST_BY_ID`), shop, achievements, sounds, save codes (RR2- with v3→v4 migration), storage
-  - `components/` — Header, BottomNav (5-tab), MenuDrawer (8 entries), BoosterBar (now incl. xpUntil), WeatherOverlay + WeatherChip, ScreenAura, Modal, AuthModal, SaveLoadModal, WipeModal, PetDropModal, AchievementToast, PetArt (26 SVGs)
-  - `views/` — RollView, ShopView (upgrades + boosters + eggs grid + rebirth panel), InventoryView (egg grid + hatch panel + pet upgrades w/ ability cooldowns), QuestsView (daily/weekly/special tabs), EventsView (active + manual triggers), PetsView (slots + buyable shop pets only), AchievementsView, LeaderboardView
-  - `App.tsx` — orchestrates auth gate, tab routing, roll flow incl. weather/rebirth/xp-booster math, quest refresh tick, auto-weather, equipped-pet ability tick, all shop/inventory/quest/weather/rebirth handlers
+Required env: `PORT`, `BASE_PATH` for frontend; `DATABASE_URL` for API server.
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS (mobile-first)
+- **API**: Express 5 + Drizzle ORM + PostgreSQL
+- **Monorepo**: pnpm workspaces, Node.js 24, TypeScript 5.9
+- **Auth**: SHA-256 client-hash (username + password), stored in `accounts` Postgres table
 
-## Key Commands
+## Where things live
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
+```
+artifacts/number-roller/src/
+  lib/        — types (schema v5), rarity, distribution, level, rebirth, pets, eggs,
+                weather, quests, shop, achievements, bosses, sounds, storage, save
+  components/ — Header, BottomNav, MenuDrawer, PetArt (55+ SVGs), BossArt (10 SVGs),
+                BoosterBar, WeatherOverlay, AchievementToast, modals
+  views/      — RollView, ShopView, InventoryView, QuestsView, EventsView, PetsView,
+                AchievementsView, LeaderboardView, BossesView
+  App.tsx     — all game logic: roll flow, boss fights, corrupted rolls, pet tick, auth
+artifacts/api-server/  — Express API (accounts, leaderboard)
+artifacts/api-spec/    — OpenAPI spec + Orval codegen
+```
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+Schema v5 source of truth: `artifacts/number-roller/src/lib/types.ts`
+
+## Architecture decisions
+
+- **Linear rebirth multipliers**: `coinMult = 1 + n*0.5`, `xpMult = 1 + n*1.0` (not exponential)
+- **Boss damage formula**: `floor(distanceFromCenter * bossDamageMult)` per roll. `bossDamageMult` stacks multiplicatively from equipped pets.
+- **Corrupted roll**: 0.1% chance per roll; drains 10% coins every 10s until player rolls a number with ≥ distance from center.
+- **Boss fights**: locked in until win or defeat. Boss attacks on the minimum-interval move timer (ticked every second). Exit only allowed after fight ends.
+- **Pet abilities**: ticked each second via `useEffect([now, activeUser])`. Pet boss-damage effects via `effectiveEffect` which returns `bossDamageMult`.
+- **Leaderboard submit**: every roll (API is idempotent; only updates entry if prob improves, but level always updates).
+- **unobtainable pets**: normally award-only; `shopBuyable: true` flag on `absolute-zero` allows purchase.
+
+## Product
+
+- **7 rarity tiers**: common → uncommon → rare → epic → legendary → mythic → unobtainable
+- **55+ pets**: shop, egg-exclusive (Jungle/Desert/Ocean/Arctic/Mythical), achievement-unlocked, shopBuyable unobtainable (Absolute Zero)
+- **10 bosses**: unlock at level 50, sequential gating; exponential HP scaling (25k → 48.8B). Each has 3 moves.
+- **Boss fight system**: roll to deal damage, boss attacks on timer, rewards on win (coins/XP/gems)
+- **Corrupted number mechanic**: blood-red aura, coin drain, cleared by rolling farther
+- **Gem rewards on rarity**: epic +5, legendary +7, mythic +15, unobtainable +50
+- **30 rebirths**: reset coins, permanent multipliers stack linearly
+- **60+ achievements**, stats panel in RollView, fixed rarity display order
+
+## User preferences
+
+- Keep all numbers in standard notation (no scientific notation in UI)
+- Rarity display order: common → uncommon → rare → epic → legendary → mythic → unobtainable
+- Boss fights should feel high-stakes and locked-in
+- Gem sources should be 10× what they were before this session
+
+## Gotchas
+
+- `schemaVersion: 5` — migration in `storage.ts` handles defeatedBosses, activeBoss, bossKills, corruptedRoll from older saves
+- Boss tick uses `Math.min(...moves.map(m => m.intervalMs))` as the attack cadence
+- `updateProfile` is a shallow-merge mutator; always spread nested objects before mutating
+- Pet upgrade cost for `unobtainable` rarity returns `Infinity` — blocks level-ups
+- `leaderboard/submit` API only updates `prob`/`number` if new prob is better; level is always updated

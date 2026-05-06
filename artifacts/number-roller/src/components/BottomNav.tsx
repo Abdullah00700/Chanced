@@ -6,28 +6,33 @@ export type Tab =
   | "events"
   | "pets"
   | "achievements"
-  | "leaderboard";
+  | "leaderboard"
+  | "bosses";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "roll", label: "Roll", icon: "◎" },
   { key: "shop", label: "Shop", icon: "▲" },
   { key: "inventory", label: "Inv", icon: "▢" },
   { key: "quests", label: "Quests", icon: "✎" },
+  { key: "bosses", label: "Bosses", icon: "⚔" },
   { key: "events", label: "Events", icon: "❉" },
 ];
 
 export function BottomNav({
   active,
   onChange,
+  bossActive,
 }: {
   active: Tab;
   onChange: (t: Tab) => void;
+  bossActive?: boolean;
 }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-[#0a0b10]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
       <div className="mx-auto flex max-w-md items-stretch">
         {TABS.map((t) => {
           const isActive = t.key === active;
+          const isBossTab = t.key === "bosses";
           return (
             <button
               key={t.key}
@@ -35,14 +40,22 @@ export function BottomNav({
               className={
                 "flex flex-1 flex-col items-center gap-0.5 px-1 py-2 text-[10px] font-semibold transition " +
                 (isActive
-                  ? "text-amber-300"
-                  : "text-zinc-500 active:text-zinc-300")
+                  ? isBossTab && bossActive
+                    ? "text-red-400"
+                    : "text-amber-300"
+                  : isBossTab && bossActive
+                    ? "text-red-500 animate-pulse"
+                    : "text-zinc-500 active:text-zinc-300")
               }
             >
               <span
                 className={
                   "text-lg leading-none " +
-                  (isActive ? "drop-shadow-[0_0_6px_rgba(252,211,77,0.6)]" : "")
+                  (isActive
+                    ? isBossTab && bossActive
+                      ? "drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]"
+                      : "drop-shadow-[0_0_6px_rgba(252,211,77,0.6)]"
+                    : "")
                 }
               >
                 {t.icon}

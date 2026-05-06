@@ -31,7 +31,7 @@ const A: Achievement[] = [
     name: "Welcome to the Curve",
     description: "Roll for the first time.",
     rarity: "common",
-    reward: { coins: 50, xp: 25, gems: 1 },
+    reward: { coins: 50, xp: 25, gems: 10 },
     check: (p) => p.totalRolls >= 1,
   },
   {
@@ -47,7 +47,7 @@ const A: Achievement[] = [
     name: "Just Warming Up",
     description: "Roll 50 times.",
     rarity: "common",
-    reward: { coins: 200, xp: 100, gems: 1 },
+    reward: { coins: 200, xp: 100, gems: 10 },
     check: (p) => p.totalRolls >= 50,
   },
   {
@@ -55,7 +55,7 @@ const A: Achievement[] = [
     name: "Triple Digits",
     description: "Roll 100 times.",
     rarity: "common",
-    reward: { coins: 400, xp: 200, gems: 1 },
+    reward: { coins: 400, xp: 200, gems: 10 },
     check: (p) => p.totalRolls >= 100,
   },
   {
@@ -63,7 +63,7 @@ const A: Achievement[] = [
     name: "Off-White",
     description: "Roll an UNCOMMON for the first time.",
     rarity: "common",
-    reward: { coins: 50, xp: 30, gems: 1 },
+    reward: { coins: 50, xp: 30, gems: 10 },
     check: (p) => p.rollsByRarity.uncommon >= 1,
   },
   {
@@ -71,7 +71,7 @@ const A: Achievement[] = [
     name: "Lightly Spiced",
     description: "Roll 10 uncommons.",
     rarity: "common",
-    reward: { coins: 200, xp: 100, gems: 1 },
+    reward: { coins: 200, xp: 100, gems: 10 },
     check: (p) => p.rollsByRarity.uncommon >= 10,
   },
   {
@@ -79,7 +79,7 @@ const A: Achievement[] = [
     name: "Best Friend",
     description: "Acquire your first pet.",
     rarity: "common",
-    reward: { coins: 1000, xp: 500, gems: 2 },
+    reward: { coins: 1000, xp: 500, gems: 20 },
     check: (p) => Object.keys(p.pets).length >= 1,
   },
   {
@@ -87,7 +87,7 @@ const A: Achievement[] = [
     name: "Tinkerer",
     description: "Buy any upgrade in the shop.",
     rarity: "common",
-    reward: { coins: 500, xp: 250, gems: 1 },
+    reward: { coins: 500, xp: 250, gems: 10 },
     check: (p) => p.upgrades.coin + p.upgrades.rarity >= 1,
   },
   {
@@ -95,493 +95,743 @@ const A: Achievement[] = [
     name: "Sprout",
     description: "Reach level 3.",
     rarity: "common",
-    reward: { coins: 100, xp: 0, gems: 1 },
+    reward: { coins: 100, xp: 0, gems: 10 },
     check: (p) => p.level >= 3,
   },
   {
-    id: "level_5",
-    name: "Apprentice",
-    description: "Reach level 5.",
+    id: "level_10",
+    name: "Getting Somewhere",
+    description: "Reach level 10.",
     rarity: "common",
-    reward: { coins: 200, xp: 0, gems: 1 },
-    check: (p) => p.level >= 5,
+    reward: { coins: 500, xp: 0, gems: 20 },
+    check: (p) => p.level >= 10,
   },
   {
-    id: "rich_1k",
-    name: "First Thousand",
-    description: "Hold 1,000 coins.",
+    id: "first_egg_buy",
+    name: "Incubator",
+    description: "Purchase your first egg.",
     rarity: "common",
-    reward: { coins: 0, xp: 100, gems: 1 },
+    reward: { coins: 1000, xp: 200, gems: 10 },
+    check: (p) =>
+      Object.values(p.eggs).some((v) => typeof v === "number" && v > 0) ||
+      p.hatch !== null,
+  },
+  {
+    id: "rolls_500",
+    name: "Dedicated Roller",
+    description: "Roll 500 times total.",
+    rarity: "common",
+    reward: { coins: 2000, xp: 800, gems: 30 },
+    check: (p) => p.totalRolls >= 500,
+  },
+  {
+    id: "coins_1k",
+    name: "Pocket Change",
+    description: "Have 1,000 coins at once.",
+    rarity: "common",
+    reward: { coins: 500, xp: 100, gems: 10 },
     check: (p) => p.coins >= 1000,
   },
   {
-    id: "equip_pet",
-    name: "Suited Up",
-    description: "Equip any pet.",
+    id: "coins_10k",
+    name: "Growing Wallet",
+    description: "Have 10,000 coins at once.",
     rarity: "common",
-    reward: { coins: 200, xp: 100, gems: 1 },
-    check: (p) => p.equippedPets.some((id) => id != null),
+    reward: { coins: 2000, xp: 500, gems: 20 },
+    check: (p) => p.coins >= 10_000,
   },
   {
-    id: "rolled_any_5xxx",
-    name: "Center Mass",
-    description: "Land in the 4900–5100 range.",
+    id: "uncommon_50",
+    name: "Off-Color Collector",
+    description: "Roll 50 uncommons.",
     rarity: "common",
-    reward: { coins: 100, xp: 50, gems: 1 },
-    check: (_p, c) =>
-      c.lastRoll != null &&
-      c.lastRoll.number >= 4900 &&
-      c.lastRoll.number <= 5100,
+    reward: { coins: 800, xp: 400, gems: 20 },
+    check: (p) => p.rollsByRarity.uncommon >= 50,
+  },
+  {
+    id: "first_hatch",
+    name: "Hatching Season",
+    description: "Hatch your first egg.",
+    rarity: "common",
+    reward: { coins: 2500, xp: 1000, gems: 20 },
+    check: (p) => Object.keys(p.pets).some((k) => {
+      const def = p.pets[k];
+      return def !== undefined;
+    }) && Object.values(p.eggs).some((v) => v >= 0),
   },
 
   // ============================ UNCOMMON ============================
   {
-    id: "rolls_500",
-    name: "Roller",
-    description: "Roll 500 times.",
-    rarity: "uncommon",
-    reward: { coins: 1500, xp: 500, gems: 2 },
-    check: (p) => p.totalRolls >= 500,
-  },
-  {
-    id: "rolls_1000",
-    name: "Four Digits",
-    description: "Roll 1,000 times.",
-    rarity: "uncommon",
-    reward: { coins: 3000, xp: 1500, gems: 3 },
-    check: (p) => p.totalRolls >= 1000,
-  },
-  {
     id: "first_rare",
-    name: "Tinted Cyan",
+    name: "Cyan Rarity",
     description: "Roll a RARE for the first time.",
     rarity: "uncommon",
-    reward: { coins: 200, xp: 100, gems: 1 },
+    reward: { coins: 1500, xp: 600, gems: 20 },
     check: (p) => p.rollsByRarity.rare >= 1,
   },
   {
-    id: "rare_10",
-    name: "Cyan Streak",
-    description: "Roll 10 rares.",
+    id: "rare_5",
+    name: "Finding the Tails",
+    description: "Roll 5 rares.",
     rarity: "uncommon",
-    reward: { coins: 1500, xp: 600, gems: 2 },
-    check: (p) => p.rollsByRarity.rare >= 10,
+    reward: { coins: 3000, xp: 1200, gems: 30 },
+    check: (p) => p.rollsByRarity.rare >= 5,
   },
   {
-    id: "level_10",
-    name: "Adept",
-    description: "Reach level 10.",
+    id: "level_25",
+    name: "Quarter Century",
+    description: "Reach level 25.",
     rarity: "uncommon",
-    reward: { coins: 1000, xp: 0, gems: 2 },
-    check: (p) => p.level >= 10,
+    reward: { coins: 5000, xp: 0, gems: 50 },
+    check: (p) => p.level >= 25,
   },
   {
-    id: "level_15",
-    name: "Skilled",
-    description: "Reach level 15.",
+    id: "level_50",
+    name: "Halfway Legend",
+    description: "Reach level 50.",
     rarity: "uncommon",
-    reward: { coins: 2500, xp: 0, gems: 3 },
-    check: (p) => p.level >= 15,
+    reward: { coins: 15000, xp: 0, gems: 100 },
+    check: (p) => p.level >= 50,
   },
   {
-    id: "rich_10k",
-    name: "Pocket Change",
-    description: "Hold 10,000 coins.",
+    id: "pets_3",
+    name: "Mini Zoo",
+    description: "Own 3 different pets.",
     rarity: "uncommon",
-    reward: { coins: 0, xp: 200, gems: 1 },
-    check: (p) => p.coins >= 10000,
+    reward: { coins: 3000, xp: 1500, gems: 30 },
+    check: (p) => Object.keys(p.pets).length >= 3,
   },
   {
-    id: "two_pets",
-    name: "Pair of Pals",
-    description: "Own 2 different pets.",
+    id: "upgrades_5",
+    name: "Power User",
+    description: "Buy 5 upgrades.",
     rarity: "uncommon",
-    reward: { coins: 1500, xp: 500, gems: 2 },
-    check: (p) => Object.keys(p.pets).length >= 2,
+    reward: { coins: 4000, xp: 2000, gems: 30 },
+    check: (p) => p.upgrades.coin + p.upgrades.rarity >= 5,
   },
   {
-    id: "five_pets",
-    name: "The Menagerie",
-    description: "Own 5 different pets.",
+    id: "rolls_1k",
+    name: "Four Digits",
+    description: "Roll 1,000 times total.",
     rarity: "uncommon",
-    reward: { coins: 5000, xp: 2000, gems: 5 },
-    check: (p) => Object.keys(p.pets).length >= 5,
+    reward: { coins: 5000, xp: 2000, gems: 50 },
+    check: (p) => p.totalRolls >= 1000,
   },
   {
-    id: "coin_upgrade_5",
-    name: "Saver",
-    description: "Reach Coin Upgrade level 5.",
+    id: "rare_25",
+    name: "Rare Collector",
+    description: "Roll 25 rares.",
     rarity: "uncommon",
-    reward: { coins: 2000, xp: 800, gems: 2 },
-    check: (p) => p.upgrades.coin >= 5,
+    reward: { coins: 8000, xp: 3000, gems: 50 },
+    check: (p) => p.rollsByRarity.rare >= 25,
   },
   {
-    id: "rarity_upgrade_5",
-    name: "Tilt the Curve",
-    description: "Reach Rarity Upgrade level 5.",
+    id: "coins_100k",
+    name: "Six Figures",
+    description: "Have 100,000 coins at once.",
     rarity: "uncommon",
-    reward: { coins: 2000, xp: 800, gems: 2 },
-    check: (p) => p.upgrades.rarity >= 5,
+    reward: { coins: 10000, xp: 3000, gems: 60 },
+    check: (p) => p.coins >= 100_000,
   },
   {
-    id: "exact_5000",
-    name: "Center of Gravity",
-    description: "Roll exactly 5000.",
+    id: "first_equipped_pet",
+    name: "Companion",
+    description: "Equip a pet.",
     rarity: "uncommon",
-    reward: { coins: 500, xp: 200, gems: 1 },
-    check: (_p, c) => c.lastRoll?.number === 5000,
-  },
-  {
-    id: "any_3000",
-    name: "Triple Threes",
-    description: "Roll exactly 3000 or 7000.",
-    rarity: "uncommon",
-    reward: { coins: 600, xp: 250, gems: 1 },
-    check: (_p, c) =>
-      c.lastRoll?.number === 3000 || c.lastRoll?.number === 7000,
-  },
-  {
-    id: "first_booster",
-    name: "Juiced",
-    description: "Activate any booster.",
-    rarity: "uncommon",
-    reward: { coins: 400, xp: 200, gems: 2 },
-    check: (p) => p.boosters.coinUntil > 0 || p.boosters.rarityUntil > 0,
+    reward: { coins: 2000, xp: 800, gems: 20 },
+    check: (p) => p.equippedPets.some((e) => e !== null),
   },
 
   // ============================ RARE ============================
   {
-    id: "rolls_5000",
-    name: "Addict",
-    description: "Roll 5,000 times.",
-    rarity: "rare",
-    reward: { coins: 15000, xp: 5000, gems: 5 },
-    check: (p) => p.totalRolls >= 5000,
-  },
-  {
-    id: "rolls_10000",
-    name: "Five Digits",
-    description: "Roll 10,000 times.",
-    rarity: "rare",
-    reward: { coins: 30000, xp: 12000, gems: 8 },
-    check: (p) => p.totalRolls >= 10000,
-  },
-  {
     id: "first_epic",
-    name: "Going Blue",
+    name: "Purple Haze",
     description: "Roll an EPIC for the first time.",
     rarity: "rare",
-    reward: { coins: 1000, xp: 400, gems: 2 },
+    reward: { coins: 8000, xp: 3000, gems: 50 },
     check: (p) => p.rollsByRarity.epic >= 1,
   },
   {
-    id: "epic_10",
-    name: "Sapphire Hands",
-    description: "Roll 10 epics.",
+    id: "epic_5",
+    name: "Epic Collector",
+    description: "Roll 5 epics.",
     rarity: "rare",
-    reward: { coins: 8000, xp: 3000, gems: 4 },
-    check: (p) => p.rollsByRarity.epic >= 10,
+    reward: { coins: 20000, xp: 8000, gems: 100 },
+    check: (p) => p.rollsByRarity.epic >= 5,
   },
   {
-    id: "level_25",
-    name: "Veteran",
-    description: "Reach level 25.",
+    id: "level_75",
+    name: "High Scorer",
+    description: "Reach level 75.",
     rarity: "rare",
-    reward: { coins: 5000, xp: 0, gems: 5 },
-    check: (p) => p.level >= 25,
-  },
-  {
-    id: "level_30",
-    name: "Seasoned",
-    description: "Reach level 30.",
-    rarity: "rare",
-    reward: { coins: 10000, xp: 0, gems: 8 },
-    check: (p) => p.level >= 30,
-  },
-  {
-    id: "rich_100k",
-    name: "Tycoon",
-    description: "Hold 100,000 coins.",
-    rarity: "rare",
-    reward: { coins: 0, xp: 2000, gems: 3 },
-    check: (p) => p.coins >= 100000,
-  },
-  {
-    id: "ten_pets",
-    name: "Pet Collector",
-    description: "Own 10 different pets.",
-    rarity: "rare",
-    reward: { coins: 25000, xp: 10000, gems: 10 },
-    check: (p) => Object.keys(p.pets).length >= 10,
-  },
-  {
-    id: "coin_upgrade_10",
-    name: "Compounding",
-    description: "Reach Coin Upgrade level 10.",
-    rarity: "rare",
-    reward: { coins: 5000, xp: 2000, gems: 3 },
-    check: (p) => p.upgrades.coin >= 10,
-  },
-  {
-    id: "rarity_upgrade_10",
-    name: "Bending Probability",
-    description: "Reach Rarity Upgrade level 10.",
-    rarity: "rare",
-    reward: { coins: 5000, xp: 2000, gems: 3 },
-    check: (p) => p.upgrades.rarity >= 10,
-  },
-  {
-    id: "exact_2500",
-    name: "Quartertile",
-    description: "Roll exactly 2500 or 7500.",
-    rarity: "rare",
-    reward: { coins: 1500, xp: 500, gems: 2 },
-    check: (_p, c) =>
-      c.lastRoll?.number === 2500 || c.lastRoll?.number === 7500,
-  },
-  {
-    id: "evolved_pet_uncommon",
-    name: "First Evolution",
-    description: "Evolve a pet to UNCOMMON.",
-    rarity: "rare",
-    reward: { coins: 5000, xp: 2000, gems: 3 },
-    check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 16),
-  },
-
-  // ============================ EPIC ============================
-  {
-    id: "rolls_25000",
-    name: "Roller Without End",
-    description: "Roll 25,000 times.",
-    rarity: "epic",
-    reward: { coins: 100000, xp: 30000, gems: 15 },
-    check: (p) => p.totalRolls >= 25000,
-  },
-  {
-    id: "first_legendary",
-    name: "Goldenrod",
-    description: "Roll a LEGENDARY for the first time.",
-    rarity: "epic",
-    reward: { coins: 5000, xp: 2000, gems: 5 },
-    check: (p) => p.rollsByRarity.legendary >= 1,
-  },
-  {
-    id: "legendary_5",
-    name: "Solar Flare",
-    description: "Roll 5 legendaries.",
-    rarity: "epic",
-    reward: { coins: 25000, xp: 10000, gems: 10 },
-    check: (p) => p.rollsByRarity.legendary >= 5,
-  },
-  {
-    id: "level_50",
-    name: "Master",
-    description: "Reach level 50.",
-    rarity: "epic",
-    reward: { coins: 25000, xp: 0, gems: 15 },
-    check: (p) => p.level >= 50,
-  },
-  {
-    id: "rich_1m",
-    name: "Millionaire",
-    description: "Hold 1,000,000 coins.",
-    rarity: "epic",
-    reward: { coins: 0, xp: 20000, gems: 10 },
-    check: (p) => p.coins >= 1_000_000,
-  },
-  {
-    id: "fifteen_pets",
-    name: "Almost All",
-    description: "Own 15 different pets.",
-    rarity: "epic",
-    reward: { coins: 100000, xp: 30000, gems: 20 },
-    check: (p) => Object.keys(p.pets).length >= 15,
-  },
-  {
-    id: "evolved_pet_rare",
-    name: "Hardened",
-    description: "Evolve a pet to RARE.",
-    rarity: "epic",
-    reward: { coins: 25000, xp: 8000, gems: 8 },
-    check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 31),
-  },
-  {
-    id: "evolved_pet_epic",
-    name: "Sapphire Soul",
-    description: "Evolve a pet to EPIC.",
-    rarity: "epic",
-    reward: { coins: 75000, xp: 25000, gems: 12 },
-    check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 46),
-  },
-  {
-    id: "coin_upgrade_25",
-    name: "Geometric",
-    description: "Reach Coin Upgrade level 25.",
-    rarity: "epic",
-    reward: { coins: 50000, xp: 15000, gems: 10 },
-    check: (p) => p.upgrades.coin >= 25,
-  },
-  {
-    id: "rarity_upgrade_25",
-    name: "Reality Bender",
-    description: "Reach Rarity Upgrade level 25.",
-    rarity: "epic",
-    reward: { coins: 50000, xp: 15000, gems: 10 },
-    check: (p) => p.upgrades.rarity >= 25,
-  },
-
-  // ============================ LEGENDARY ============================
-  {
-    id: "rolls_100000",
-    name: "Six Digits",
-    description: "Roll 100,000 times.",
-    rarity: "legendary",
-    reward: { coins: 1_000_000, xp: 300000, gems: 50 },
-    check: (p) => p.totalRolls >= 100000,
-  },
-  {
-    id: "first_mythic",
-    name: "The Void",
-    description: "Roll a MYTHIC for the first time.",
-    rarity: "legendary",
-    reward: { coins: 25000, xp: 10000, gems: 15 },
-    check: (p) => p.rollsByRarity.mythic >= 1,
-  },
-  {
-    id: "mythic_5",
-    name: "Voidtouched",
-    description: "Roll 5 mythics.",
-    rarity: "legendary",
-    reward: { coins: 250000, xp: 75000, gems: 30 },
-    check: (p) => p.rollsByRarity.mythic >= 5,
+    reward: { coins: 30000, xp: 0, gems: 200 },
+    check: (p) => p.level >= 75,
   },
   {
     id: "level_100",
     name: "Centurion",
     description: "Reach level 100.",
-    rarity: "legendary",
-    reward: { coins: 500000, xp: 0, gems: 50 },
+    rarity: "rare",
+    reward: { coins: 100000, xp: 0, gems: 500 },
     check: (p) => p.level >= 100,
   },
   {
-    id: "rich_10m",
-    name: "Fortune",
-    description: "Hold 10,000,000 coins.",
-    rarity: "legendary",
-    reward: { coins: 0, xp: 250000, gems: 30 },
-    check: (p) => p.coins >= 10_000_000,
+    id: "pets_6",
+    name: "Safari",
+    description: "Own 6 different pets.",
+    rarity: "rare",
+    reward: { coins: 15000, xp: 5000, gems: 100 },
+    check: (p) => Object.keys(p.pets).length >= 6,
   },
   {
-    id: "twenty_pets",
-    name: "Completionist",
+    id: "upgrades_10",
+    name: "Maximized",
+    description: "Buy 10 upgrades.",
+    rarity: "rare",
+    reward: { coins: 20000, xp: 8000, gems: 100 },
+    check: (p) => p.upgrades.coin + p.upgrades.rarity >= 10,
+  },
+  {
+    id: "rolls_5k",
+    name: "Veteran Roller",
+    description: "Roll 5,000 times total.",
+    rarity: "rare",
+    reward: { coins: 25000, xp: 10000, gems: 200 },
+    check: (p) => p.totalRolls >= 5000,
+  },
+  {
+    id: "coins_1m",
+    name: "Millionaire",
+    description: "Have 1,000,000 coins at once.",
+    rarity: "rare",
+    reward: { coins: 100000, xp: 20000, gems: 300 },
+    check: (p) => p.coins >= 1_000_000,
+  },
+  {
+    id: "rare_100",
+    name: "Rare Fanatic",
+    description: "Roll 100 rares.",
+    rarity: "rare",
+    reward: { coins: 30000, xp: 12000, gems: 150 },
+    check: (p) => p.rollsByRarity.rare >= 100,
+  },
+  {
+    id: "two_pet_slots",
+    name: "Dynamic Duo",
+    description: "Unlock and fill 2 pet slots simultaneously.",
+    rarity: "rare",
+    reward: { coins: 10000, xp: 5000, gems: 100 },
+    check: (p) =>
+      p.equippedPets.filter((e) => e !== null).length >= 2,
+  },
+  {
+    id: "rebirth_1",
+    name: "Born Again",
+    description: "Perform your first rebirth.",
+    rarity: "rare",
+    reward: { coins: 0, xp: 10000, gems: 500 },
+    check: (p) => (p.rebirths ?? 0) >= 1,
+  },
+  {
+    id: "jungle_egg_hatch",
+    name: "Jungle Fever",
+    description: "Hatch at least one Jungle Egg.",
+    rarity: "rare",
+    reward: { coins: 20000, xp: 8000, gems: 100 },
+    check: (p) =>
+      ["monkey", "tree-frog", "gorilla", "toucan", "lion"].some(
+        (id) => !!p.pets[id],
+      ),
+  },
+  {
+    id: "gems_100",
+    name: "Gem Hoarder",
+    description: "Have 100 gems at once.",
+    rarity: "rare",
+    reward: { coins: 5000, xp: 2000, gems: 0 },
+    check: (p) => p.gems >= 100,
+  },
+  {
+    id: "epic_20",
+    name: "Epic Regular",
+    description: "Roll 20 epics.",
+    rarity: "rare",
+    reward: { coins: 50000, xp: 20000, gems: 200 },
+    check: (p) => p.rollsByRarity.epic >= 20,
+  },
+
+  // ============================ EPIC ============================
+  {
+    id: "first_legendary",
+    name: "Golden Moment",
+    description: "Roll a LEGENDARY for the first time.",
+    rarity: "epic",
+    reward: { coins: 25000, xp: 10000, gems: 200 },
+    check: (p) => p.rollsByRarity.legendary >= 1,
+  },
+  {
+    id: "legendary_5",
+    name: "Legend Rising",
+    description: "Roll 5 legendaries.",
+    rarity: "epic",
+    reward: { coins: 80000, xp: 30000, gems: 500 },
+    check: (p) => p.rollsByRarity.legendary >= 5,
+  },
+  {
+    id: "legendary_25",
+    name: "Living Legend",
+    description: "Roll 25 legendaries.",
+    rarity: "epic",
+    reward: { coins: 300000, xp: 100000, gems: 1500 },
+    check: (p) => p.rollsByRarity.legendary >= 25,
+  },
+  {
+    id: "rebirth_5",
+    name: "Phoenix Soul",
+    description: "Rebirth 5 times.",
+    rarity: "epic",
+    reward: { coins: 0, xp: 50000, gems: 2000 },
+    check: (p) => (p.rebirths ?? 0) >= 5,
+  },
+  {
+    id: "level_150",
+    name: "Ascending",
+    description: "Reach level 150.",
+    rarity: "epic",
+    reward: { coins: 500000, xp: 0, gems: 2000 },
+    check: (p) => p.level >= 150,
+  },
+  {
+    id: "pets_12",
+    name: "Ark Builder",
+    description: "Own 12 different pets.",
+    rarity: "epic",
+    reward: { coins: 100000, xp: 40000, gems: 500 },
+    check: (p) => Object.keys(p.pets).length >= 12,
+  },
+  {
+    id: "rolls_25k",
+    name: "Obsessed Roller",
+    description: "Roll 25,000 times total.",
+    rarity: "epic",
+    reward: { coins: 200000, xp: 80000, gems: 1000 },
+    check: (p) => p.totalRolls >= 25000,
+  },
+  {
+    id: "coins_100m",
+    name: "Fortune Amassed",
+    description: "Have 100,000,000 coins at once.",
+    rarity: "epic",
+    reward: { coins: 5000000, xp: 500000, gems: 3000 },
+    check: (p) => p.coins >= 100_000_000,
+  },
+  {
+    id: "desert_egg_hatch",
+    name: "Desert Storm",
+    description: "Hatch at least one Desert Egg.",
+    rarity: "epic",
+    reward: { coins: 50000, xp: 20000, gems: 300 },
+    check: (p) =>
+      ["horned-gecko", "rattlesnake", "scorpion", "camel", "fennec-fox"].some(
+        (id) => !!p.pets[id],
+      ),
+  },
+  {
+    id: "ocean_egg_hatch",
+    name: "Sea Legs",
+    description: "Hatch at least one Ocean Egg.",
+    rarity: "epic",
+    reward: { coins: 50000, xp: 20000, gems: 300 },
+    check: (p) =>
+      ["fish", "sea-horse", "starfish", "shark", "blue-whale"].some(
+        (id) => !!p.pets[id],
+      ),
+  },
+  {
+    id: "gems_1000",
+    name: "Gem Baron",
+    description: "Have 1,000 gems at once.",
+    rarity: "epic",
+    reward: { coins: 50000, xp: 10000, gems: 0 },
+    check: (p) => p.gems >= 1000,
+  },
+  {
+    id: "first_boss_kill",
+    name: "Boss Slayer",
+    description: "Defeat your first boss.",
+    rarity: "epic",
+    reward: { coins: 500000, xp: 200000, gems: 2000 },
+    check: (p) => p.bossKills >= 1,
+  },
+  {
+    id: "boss_fight_3",
+    name: "Monster Hunter",
+    description: "Defeat 3 different bosses.",
+    rarity: "epic",
+    reward: { coins: 2000000, xp: 500000, gems: 5000 },
+    check: (p) => p.defeatedBosses.length >= 3,
+  },
+  {
+    id: "arctic_egg_hatch",
+    name: "Deep Freeze",
+    description: "Hatch at least one Arctic Egg.",
+    rarity: "epic",
+    reward: { coins: 100000, xp: 40000, gems: 500 },
+    check: (p) =>
+      ["arctic-fox", "polar-bear", "snow-leopard", "ice-dragon", "frost-titan"].some(
+        (id) => !!p.pets[id],
+      ),
+  },
+  {
+    id: "corrupted_first",
+    name: "Corrupted Survivor",
+    description: "Survive a corrupted number roll by defeating it.",
+    rarity: "epic",
+    reward: { coins: 200000, xp: 50000, gems: 1000 },
+    check: (p) => (p.achievements["corrupted_first"] ?? 0) > 0,
+  },
+
+  // ============================ LEGENDARY ============================
+  {
+    id: "first_mythic",
+    name: "The Impossible Roll",
+    description: "Roll a MYTHIC for the first time.",
+    rarity: "legendary",
+    reward: { coins: 100000, xp: 50000, gems: 1000 },
+    check: (p) => p.rollsByRarity.mythic >= 1,
+  },
+  {
+    id: "mythic_5",
+    name: "Mythical Being",
+    description: "Roll 5 mythics.",
+    rarity: "legendary",
+    reward: { coins: 500000, xp: 200000, gems: 5000 },
+    check: (p) => p.rollsByRarity.mythic >= 5,
+  },
+  {
+    id: "mythic_25",
+    name: "Mythic God",
+    description: "Roll 25 mythics.",
+    rarity: "legendary",
+    reward: { coins: 2000000, xp: 800000, gems: 20000 },
+    check: (p) => p.rollsByRarity.mythic >= 25,
+  },
+  {
+    id: "rebirth_10",
+    name: "Eternal Soul",
+    description: "Rebirth 10 times.",
+    rarity: "legendary",
+    reward: { coins: 0, xp: 200000, gems: 10000 },
+    check: (p) => (p.rebirths ?? 0) >= 10,
+  },
+  {
+    id: "level_300",
+    name: "Transcendent",
+    description: "Reach level 300.",
+    rarity: "legendary",
+    reward: { coins: 10000000, xp: 0, gems: 10000 },
+    check: (p) => p.level >= 300,
+  },
+  {
+    id: "pets_20",
+    name: "Master Tamer",
     description: "Own 20 different pets.",
     rarity: "legendary",
-    reward: { coins: 1_000_000, xp: 200000, gems: 50 },
+    reward: { coins: 500000, xp: 200000, gems: 3000 },
     check: (p) => Object.keys(p.pets).length >= 20,
   },
   {
-    id: "evolved_pet_legendary",
-    name: "Ascendant",
-    description: "Evolve a pet to LEGENDARY.",
+    id: "rolls_100k",
+    name: "Eternal Roller",
+    description: "Roll 100,000 times total.",
     rarity: "legendary",
-    reward: { coins: 500000, xp: 150000, gems: 30 },
-    check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 61),
+    reward: { coins: 1000000, xp: 500000, gems: 5000 },
+    check: (p) => p.totalRolls >= 100000,
   },
   {
-    id: "first_rebirth",
-    name: "Reborn",
-    description: "Perform your first rebirth.",
+    id: "coins_10b",
+    name: "Billionaire",
+    description: "Have 10,000,000,000 coins at once.",
     rarity: "legendary",
-    reward: { coins: 250000, xp: 100000, gems: 25 },
-    check: (p) => (p.rebirths ?? 0) >= 1,
+    reward: { coins: 100000000, xp: 10000000, gems: 50000 },
+    check: (p) => p.coins >= 10_000_000_000,
+  },
+  {
+    id: "rebirth_20",
+    name: "Cosmic Ascendant",
+    description: "Rebirth 20 times.",
+    rarity: "legendary",
+    reward: { coins: 0, xp: 1000000, gems: 50000 },
+    check: (p) => (p.rebirths ?? 0) >= 20,
+  },
+  {
+    id: "boss_fight_7",
+    name: "Titan Destroyer",
+    description: "Defeat 7 different bosses.",
+    rarity: "legendary",
+    reward: { coins: 100000000, xp: 50000000, gems: 100000 },
+    check: (p) => p.defeatedBosses.length >= 7,
+  },
+  {
+    id: "mythical_egg_hatch",
+    name: "Born of Myth",
+    description: "Hatch at least one Mythical Egg.",
+    rarity: "legendary",
+    reward: { coins: 500000, xp: 200000, gems: 5000 },
+    check: (p) =>
+      ["rune-stone", "astral-wolf", "reality-fox", "infinity-drake", "primordial-god"].some(
+        (id) => !!p.pets[id],
+      ),
+  },
+  {
+    id: "boss_kills_5",
+    name: "Boss Annihilator",
+    description: "Kill any bosses 5 times total.",
+    rarity: "legendary",
+    reward: { coins: 50000000, xp: 20000000, gems: 50000 },
+    check: (p) => p.bossKills >= 5,
+  },
+  {
+    id: "gems_50000",
+    name: "Gem God",
+    description: "Have 50,000 gems at once.",
+    rarity: "legendary",
+    reward: { coins: 1000000, xp: 500000, gems: 0 },
+    check: (p) => p.gems >= 50_000,
   },
 
   // ============================ MYTHIC ============================
   {
-    id: "edge_zero",
-    name: "Absolute Zero",
-    description: "Roll exactly 0.",
+    id: "mythic_100",
+    name: "Beyond the Curve",
+    description: "Roll 100 mythics.",
     rarity: "mythic",
-    reward: { coins: 250000, xp: 100000, gems: 100 },
-    check: (_p, c) => c.lastRoll?.number === 0,
+    reward: {
+      coins: 10000000,
+      xp: 5000000,
+      gems: 100000,
+      petId: "cybernetic-dragon",
+    },
+    check: (p) => p.rollsByRarity.mythic >= 100,
   },
   {
-    id: "edge_max",
-    name: "Maxed",
-    description: "Roll exactly 10000.",
+    id: "cosmic_ascent",
+    name: "Cosmic Ascent",
+    description: "Reach level 500 and rebirth 25 times.",
     rarity: "mythic",
-    reward: { coins: 250000, xp: 100000, gems: 100 },
-    check: (_p, c) => c.lastRoll?.number === 10000,
+    reward: {
+      coins: 50000000,
+      xp: 25000000,
+      gems: 500000,
+      petId: "cosmic-serpent",
+    },
+    check: (p) => p.level >= 500 && (p.rebirths ?? 0) >= 25,
   },
   {
-    id: "mythic_25",
-    name: "Voidsworn",
-    description: "Roll 25 mythics.",
+    id: "all_bosses",
+    name: "Conqueror of All",
+    description: "Defeat all 10 bosses.",
     rarity: "mythic",
-    reward: { coins: 2_000_000, xp: 500000, gems: 100 },
-    check: (p) => p.rollsByRarity.mythic >= 25,
+    reward: {
+      coins: 1000000000,
+      xp: 500000000,
+      gems: 1000000,
+    },
+    check: (p) => p.defeatedBosses.length >= 10,
   },
   {
-    id: "level_250",
-    name: "Demigod",
-    description: "Reach level 250.",
+    id: "rolls_1m",
+    name: "The Endless Roll",
+    description: "Roll 1,000,000 times.",
     rarity: "mythic",
-    reward: { coins: 5_000_000, xp: 0, gems: 200 },
-    check: (p) => p.level >= 250,
+    reward: {
+      coins: 100000000,
+      xp: 50000000,
+      gems: 500000,
+    },
+    check: (p) => p.totalRolls >= 1_000_000,
   },
   {
-    id: "rich_100m",
-    name: "Plutocrat",
-    description: "Hold 100,000,000 coins.",
+    id: "rebirth_30",
+    name: "Absolute Transcendence",
+    description: "Reach the maximum rebirth level (30).",
     rarity: "mythic",
-    reward: { coins: 0, xp: 1_000_000, gems: 100 },
-    check: (p) => p.coins >= 100_000_000,
+    reward: {
+      coins: 0,
+      xp: 100000000,
+      gems: 2000000,
+    },
+    check: (p) => (p.rebirths ?? 0) >= 30,
   },
   {
-    id: "evolved_pet_mythic",
-    name: "Reality-Bender",
-    description: "Evolve a pet all the way to MYTHIC.",
+    id: "pets_all_eggs",
+    name: "Eggsplosion",
+    description: "Hatch every type of egg at least once.",
     rarity: "mythic",
-    reward: { coins: 5_000_000, xp: 1_000_000, gems: 150 },
+    reward: {
+      coins: 100000000,
+      xp: 50000000,
+      gems: 250000,
+    },
+    check: (p) => {
+      const allEggPets = [
+        "monkey", "tree-frog", "gorilla", "toucan", "lion",
+        "horned-gecko", "rattlesnake", "scorpion", "camel", "fennec-fox",
+        "fish", "sea-horse", "starfish", "shark", "blue-whale",
+        "arctic-fox", "polar-bear", "snow-leopard", "ice-dragon", "frost-titan",
+        "rune-stone", "astral-wolf", "reality-fox", "infinity-drake", "primordial-god",
+      ];
+      return allEggPets.filter((id) => !!p.pets[id]).length >= 20;
+    },
+  },
+
+  // ============================================================
+  // UNOBTAINABLE PET ACHIEVEMENTS
+  // These award unobtainable special pets.
+  // ============================================================
+
+  // Developer Monkey: own Monkey + roll 5000 times
+  {
+    id: "dev_monkey_unlock",
+    name: "I Am The Algorithm",
+    description: "Own the Monkey pet and roll 5,000 times total.",
+    rarity: "epic",
+    reward: {
+      coins: 100000,
+      xp: 50000,
+      gems: 5000,
+      petId: "developer-monkey",
+    },
+    check: (p) => !!p.pets["monkey"] && p.totalRolls >= 5000,
+  },
+
+  // Scaly Demon: own Horned Gecko + roll 10 epics
+  {
+    id: "scaly_demon_unlock",
+    name: "Evolution of Scales",
+    description: "Own the Horned Gecko and roll 10 epics.",
+    rarity: "epic",
+    reward: {
+      coins: 500000,
+      xp: 200000,
+      gems: 10000,
+      petId: "scaly-demon",
+    },
+    check: (p) => !!p.pets["horned-gecko"] && p.rollsByRarity.epic >= 10,
+  },
+
+  // Megalodon: own Shark + own Fish + roll 50 legendaries
+  {
+    id: "megalodon_unlock",
+    name: "Apex Predator",
+    description: "Own Shark and Fish, and roll 50 legendaries.",
+    rarity: "legendary",
+    reward: {
+      coins: 5000000,
+      xp: 2000000,
+      gems: 50000,
+      petId: "megalodon",
+    },
     check: (p) =>
-      Object.values(p.pets).some((inst) => (inst.level ?? 1) >= 81),
+      !!p.pets["shark"] &&
+      !!p.pets["fish"] &&
+      p.rollsByRarity.legendary >= 50,
   },
+
+  // Arctic Guardian: own Arctic Fox + defeat boss 1 (Slime King)
   {
-    id: "rebirth_5",
-    name: "Cycle of Five",
-    description: "Reach 5 rebirths.",
-    rarity: "mythic",
-    reward: { coins: 5_000_000, xp: 2_000_000, gems: 200 },
-    check: (p) => (p.rebirths ?? 0) >= 5,
+    id: "arctic_guardian_unlock",
+    name: "Guardian of the Tundra",
+    description: "Own the Arctic Fox and defeat the Slime King boss.",
+    rarity: "legendary",
+    reward: {
+      coins: 5000000,
+      xp: 2000000,
+      gems: 50000,
+      petId: "arctic-guardian",
+    },
+    check: (p) =>
+      !!p.pets["arctic-fox"] &&
+      p.defeatedBosses.includes("slime-king"),
   },
+
+  // Primordial Chaos: own Rune Stone + defeat boss 5 (Thunder Colossus)
   {
-    id: "rebirth_15",
-    name: "Endless Cycle",
-    description: "Reach 15 rebirths.",
+    id: "primordial_chaos_unlock",
+    name: "Before the Beginning",
+    description: "Own the Rune Stone and defeat the Thunder Colossus.",
     rarity: "mythic",
-    reward: { coins: 25_000_000, xp: 10_000_000, gems: 500 },
-    check: (p) => (p.rebirths ?? 0) >= 15,
+    reward: {
+      coins: 100000000,
+      xp: 50000000,
+      gems: 500000,
+      petId: "primordial-chaos",
+    },
+    check: (p) =>
+      !!p.pets["rune-stone"] &&
+      p.defeatedBosses.includes("thunder-colossus"),
   },
 ];
 
-// Sort: lowest rarity first, then by id for stable order.
-A.sort((a, b) => {
-  const ra = RARITY_RANK[a.rarity];
-  const rb = RARITY_RANK[b.rarity];
-  if (ra !== rb) return ra - rb;
-  return a.id.localeCompare(b.id);
-});
+// Ensure no duplicates
+const seen = new Set<string>();
+for (const a of A) {
+  if (seen.has(a.id)) {
+    console.warn(`Duplicate achievement id: ${a.id}`);
+  }
+  seen.add(a.id);
+}
 
 export const ACHIEVEMENTS: Achievement[] = A;
 
-export const ACHIEVEMENT_BY_ID: Record<string, Achievement> = ACHIEVEMENTS.reduce(
+export const ACHIEVEMENT_BY_ID: Record<string, Achievement> = A.reduce(
   (acc, a) => {
     acc[a.id] = a;
     return acc;
   },
   {} as Record<string, Achievement>,
 );
+
+export function checkAndGrantAchievements(
+  profile: Profile,
+  ctx: AchCheckCtx,
+  grant: (id: string, reward: Achievement["reward"]) => void,
+) {
+  for (const ach of ACHIEVEMENTS) {
+    if (profile.achievements[ach.id]) continue;
+    if (ach.check(profile, ctx)) {
+      grant(ach.id, ach.reward);
+    }
+  }
+}
+
+export const RARITY_COLOR: Record<AchievementRarity, string> = {
+  common: "text-zinc-300",
+  uncommon: "text-emerald-300",
+  rare: "text-sky-300",
+  epic: "text-purple-400",
+  legendary: "text-amber-300",
+  mythic: "text-pink-400",
+  unobtainable: "text-white",
+};
+
+export const RARITY_BORDER: Record<AchievementRarity, string> = {
+  common: "border-zinc-700/50",
+  uncommon: "border-emerald-600/40",
+  rare: "border-sky-500/40",
+  epic: "border-purple-600/40",
+  legendary: "border-amber-500/40",
+  mythic: "border-pink-500/40",
+  unobtainable: "border-white/30",
+};
+
+export function sortedAchievements(p: Profile) {
+  return [...ACHIEVEMENTS].sort((a, b) => {
+    const aHas = !!p.achievements[a.id];
+    const bHas = !!p.achievements[b.id];
+    if (aHas !== bHas) return aHas ? -1 : 1;
+    const ra = RARITY_RANK[a.rarity];
+    const rb = RARITY_RANK[b.rarity];
+    return ra - rb;
+  });
+}

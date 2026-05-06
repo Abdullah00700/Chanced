@@ -88,7 +88,9 @@ import {
   WEATHER_BY_ID,
   WEATHER_MANUAL_COOLDOWN_MS,
 } from "./lib/weather";
+import { BOSS_BY_ID } from "./lib/bosses";
 import { AchievementsView } from "./views/AchievementsView";
+import { BossesView } from "./views/BossesView";
 import { EventsView } from "./views/EventsView";
 import { InventoryView } from "./views/InventoryView";
 import { LeaderboardView } from "./views/LeaderboardView";
@@ -224,13 +226,15 @@ export default function App() {
     let xpMult = 1;
     let rarityTilt = 0;
     let rollSpeedMult = 1;
+    let bossDamageMult = 1;
     for (const e of equippedEffects) {
       coinMult *= e.eff.coinMult;
       xpMult *= e.eff.xpMult;
       rarityTilt += e.eff.rarityTilt;
       rollSpeedMult *= e.eff.rollSpeedMult;
+      bossDamageMult *= e.eff.bossDamageMult;
     }
-    return { coinMult, xpMult, rarityTilt, rollSpeedMult };
+    return { coinMult, xpMult, rarityTilt, rollSpeedMult, bossDamageMult };
   }, [equippedEffects]);
 
   const cyberneticActive = equippedEffects.some(
@@ -332,9 +336,13 @@ export default function App() {
       if (result.rarity === "mythic") nextMythicStreak += 1;
       else if (result.rarity !== "unobtainable") nextMythicStreak = 0;
 
+      // Capture bossDamageMult before updateProfile (closures capture outer scope)
+      const bossDamageMultiplier = combinedPetEffect.bossDamageMult;
+
       // Apply to profile
       updateProfile((p) => {
         p.coins += result.coinsEarned;
+        p.gems += result.gemsEarned;
         p.totalRolls += 1;
         p.rollsByRarity = {
           ...p.rollsByRarity,
@@ -373,6 +381,35 @@ export default function App() {
           };
         }
 
+        // Boss fight: deal damage based on distance from center
+        const distFromCtr = Math.abs(n - CENTER);
+        if (p.activeBoss && p.activeBoss.playerHp > 0 && p.activeBoss.bossHp > 0) {
+          const dmg = Math.max(1, Math.floor(distFromCtr * bossDamageMultiplier));
+          p.activeBoss = {
+            ...p.activeBoss,
+            bossHp: Math.max(0, p.activeBoss.bossHp - dmg),
+            totalDamageDealt: p.activeBoss.totalDamageDealt + dmg,
+            rollsDone: p.activeBoss.rollsDone + 1,
+          };
+        }
+
+        // Corrupted roll: 0.1% chance (not during boss fight)
+        if (!p.activeBoss) {
+          if (Math.random() < 0.001) {
+            p.corruptedRoll = {
+              number: n,
+              distance: distFromCtr,
+              drainPerTick: Math.max(100, Math.floor(p.coins * 0.1)),
+              lastDrainAt: Date.now(),
+            };
+          } else if (p.corruptedRoll) {
+            if (distFromCtr >= p.corruptedRoll.distance) {
+              p.corruptedRoll = null;
+              p.achievements = { ...p.achievements, corrupted_first: Date.now() };
+            }
+          }
+        }
+
         // Quest progression
         advanceForRoll(p, result.rarity, n, result.coinsEarned, result.xpEarned);
 
@@ -408,15 +445,15 @@ export default function App() {
         mythicStreak: nextMythicStreak,
       });
 
-      // Leaderboard — submit to cloud and refresh
-      if (result.prob < 0.001 && profile) {
-        const entry = {
+      // Leaderboard — always submit to keep level fresh
+      if (profile) {
+        const submitEntry = {
           number: n,
           prob: result.prob,
           rarity: result.rarity,
           level: profile.level,
         };
-        void apiSubmitLeader(profile.username, profile.passwordHash, entry)
+        void apiSubmitLeader(profile.username, profile.passwordHash, submitEntry)
           .then(() => apiGetLeaderboard())
           .then((entries) => setLeaderboard(entries))
           .catch(() => {
@@ -581,7 +618,7 @@ export default function App() {
     const pet = PET_BY_ID[id];
     if (!profile || !pet) return;
     if (profile.pets[id]) return;
-    if (pet.baseRarity === "unobtainable") return;
+    if (pet.baseRarity === "unobtainable" && !pet.shopBuyable) return;
     if (profile.coins < pet.costCoins || profile.gems < pet.costGems) return;
     updateProfile((p) => {
       p.coins -= pet.costCoins;
@@ -870,6 +907,59 @@ export default function App() {
     setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
   }
 
+  // ---- Boss fight actions ----
+  function doStartBoss(bossId: string) {
+    if (!profile) return;
+    const boss = BOSS_BY_ID[bossId];
+    if (!boss) return;
+    if (profile.activeBoss) return;
+    updateProfile((p) => {
+      p.activeBoss = {
+        bossId: boss.id,
+        playerHp: boss.playerHp,
+        playerMaxHp: boss.playerHp,
+        bossHp: boss.hp,
+        bossMaxHp: boss.hp,
+        startedAt: Date.now(),
+        lastMoveId: null,
+        lastMoveName: null,
+        lastMoveDamage: 0,
+        lastMoveAt: Date.now(),
+        totalDamageDealt: 0,
+        rollsDone: 0,
+      };
+      return p;
+    });
+  }
+
+  function doExitBoss() {
+    if (!profile || !profile.activeBoss) return;
+    const fight = profile.activeBoss;
+    const isWon = fight.bossHp <= 0;
+    const isDead = fight.playerHp <= 0;
+    if (!isWon && !isDead) return; // can only exit when fight is over
+    const boss = BOSS_BY_ID[fight.bossId];
+    updateProfile((p) => {
+      if (isWon && boss) {
+        p.coins += boss.rewardCoins;
+        p.gems += boss.rewardGems;
+        const lv = applyXpGain(p.level, p.xp, boss.rewardXp);
+        p.level = lv.level;
+        p.xp = lv.xpInLevel;
+        if (!p.defeatedBosses.includes(fight.bossId)) {
+          p.defeatedBosses = [...p.defeatedBosses, fight.bossId];
+        }
+        p.bossKills = (p.bossKills ?? 0) + 1;
+      }
+      p.activeBoss = null;
+      return p;
+    });
+    if (isWon) {
+      playLevelUp();
+      setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
+    }
+  }
+
   // ---- Tick: refresh quests, auto weather, pet abilities ----
   useEffect(() => {
     if (!profile) return;
@@ -891,6 +981,8 @@ export default function App() {
       xp: draft.xp,
       lvl: draft.level,
       hatch: draft.hatch,
+      boss: draft.activeBoss,
+      corrupted: draft.corruptedRoll,
     });
 
     // Quests refresh
@@ -1005,6 +1097,40 @@ export default function App() {
       changed = true;
     }
 
+    // Boss attacks: fire when minInterval has elapsed since last move
+    if (draft.activeBoss && draft.activeBoss.playerHp > 0 && draft.activeBoss.bossHp > 0) {
+      const bossForTick = BOSS_BY_ID[draft.activeBoss.bossId];
+      if (bossForTick) {
+        const minInterval = Math.min(...bossForTick.moves.map((m) => m.intervalMs));
+        const timeSinceMove = now - draft.activeBoss.lastMoveAt;
+        if (timeSinceMove >= minInterval) {
+          const move = bossForTick.moves[Math.floor(Math.random() * bossForTick.moves.length)];
+          const newPlayerHp = Math.max(0, draft.activeBoss.playerHp - move.damage);
+          draft.activeBoss = {
+            ...draft.activeBoss,
+            playerHp: newPlayerHp,
+            lastMoveId: move.id,
+            lastMoveName: move.name,
+            lastMoveDamage: move.damage,
+            lastMoveAt: now,
+          };
+          changed = true;
+        }
+      }
+    }
+
+    // Corrupted roll drain: 10% of current coins every 10s
+    if (draft.corruptedRoll && now - draft.corruptedRoll.lastDrainAt >= 10_000) {
+      const drain = Math.max(1, Math.floor(draft.coins * 0.1));
+      draft.coins = Math.max(0, draft.coins - drain);
+      draft.corruptedRoll = {
+        ...draft.corruptedRoll,
+        drainPerTick: drain,
+        lastDrainAt: now,
+      };
+      changed = true;
+    }
+
     const after = JSON.stringify({
       q: draft.quests,
       w: draft.weather,
@@ -1015,6 +1141,8 @@ export default function App() {
       xp: draft.xp,
       lvl: draft.level,
       hatch: draft.hatch,
+      boss: draft.activeBoss,
+      corrupted: draft.corruptedRoll,
     });
     if (changed || before !== after) {
       updateProfile(() => draft);
@@ -1059,7 +1187,7 @@ export default function App() {
   }
 
   const isMenuOnlyTab =
-    tab === "pets" || tab === "achievements" || tab === "leaderboard";
+    tab === "pets" || tab === "achievements" || tab === "leaderboard" || tab === "bosses";
   const weatherTimeLeft = Math.max(0, profile.weather.activeUntil - now);
 
   return (
@@ -1157,8 +1285,17 @@ export default function App() {
       {tab === "leaderboard" && (
         <LeaderboardView entries={leaderboard} currentUser={profile.username} />
       )}
+      {tab === "bosses" && (
+        <BossesView
+          profile={profile}
+          rolling={rolling}
+          onRoll={doRoll}
+          onStartBoss={doStartBoss}
+          onExitBoss={doExitBoss}
+        />
+      )}
 
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={setTab} bossActive={!!profile.activeBoss} />
 
       <MenuDrawer
         open={menuOpen}
@@ -1264,6 +1401,11 @@ function produceRollResult(
   // Tier helper hint (unused but useful for future)
   void NORMAL_TIERS;
 
+  const GEMS_BY_RARITY: Partial<Record<string, number>> = {
+    epic: 5, legendary: 7, mythic: 15, unobtainable: 50,
+  };
+  const gemsEarned = GEMS_BY_RARITY[r.key] ?? 0;
+
   return {
     number: n,
     prob,
@@ -1274,6 +1416,7 @@ function produceRollResult(
     baseXp,
     xpMult,
     xpEarned: Math.max(1, Math.floor(baseXp * xpMult)),
+    gemsEarned,
     petDropped: null as string | null,
   };
 }

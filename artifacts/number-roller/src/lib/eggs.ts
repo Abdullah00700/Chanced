@@ -4,21 +4,14 @@ export type EggDef = {
   id: string;
   name: string;
   flavor: string;
-  /** gem cost to buy from shop */
   cost: number;
-  /** hatch animation duration (ms) */
   hatchMs: number;
-  /** rebirth count required to unlock (0 = available from start) */
   rebirthRequired: number;
-  /** weighted hatch table — { petId, weight } */
   hatchTable: Array<{ petId: string; weight: number }>;
-  /** color theme (hex) */
   color: string;
-  /** symbol on egg */
   symbol: string;
 };
 
-// Hatch tables are weighted (sum to 100 for clarity). Pets are defined in pets.ts.
 export const EGGS: EggDef[] = [
   // ---- Always available ----
   {
@@ -112,7 +105,7 @@ export const EGGS: EggDef[] = [
       { petId: "rattlesnake", weight: 30 },
       { petId: "scorpion", weight: 12 },
       { petId: "camel", weight: 5 },
-      { petId: "fennec-fox", weight: 3 }, // user said 2% — slight bump for math; close enough
+      { petId: "fennec-fox", weight: 3 },
     ],
   },
   {
@@ -125,23 +118,47 @@ export const EGGS: EggDef[] = [
     color: "#0ea5e9",
     symbol: "≈",
     hatchTable: [
-      { petId: "fish", weight: 45 },
+      { petId: "fish", weight: 55 },
       { petId: "sea-horse", weight: 30 },
       { petId: "starfish", weight: 10 },
-      { petId: "shark", weight: 9 }, // user said 4 + sea-horse 30 + fish 45 + starfish 10 + blue-whale 1 = 90; pad shark to 9 for round 100
+      { petId: "shark", weight: 4 },
       { petId: "blue-whale", weight: 1 },
-      { petId: "shark", weight: 5 }, // additional bump: total shark weight = 14 to make it >4% in shop balance — user requested ~4% for shark; let's instead split cleanly
     ],
   },
-];
-
-// NOTE: simplify ocean egg table to match user spec exactly (45/30/10/4/1 sum 90, pad with extra fish to 100):
-EGGS[EGGS.length - 1].hatchTable = [
-  { petId: "fish", weight: 55 },
-  { petId: "sea-horse", weight: 30 },
-  { petId: "starfish", weight: 10 },
-  { petId: "shark", weight: 4 },
-  { petId: "blue-whale", weight: 1 },
+  {
+    id: "egg-arctic",
+    name: "Arctic Egg",
+    flavor: "Ice cold and glowing with a faint blue light. Frozen wonder inside.",
+    cost: 1500,
+    hatchMs: 120_000,
+    rebirthRequired: 15,
+    color: "#7dd3fc",
+    symbol: "❄",
+    hatchTable: [
+      { petId: "arctic-fox", weight: 45 },
+      { petId: "polar-bear", weight: 30 },
+      { petId: "snow-leopard", weight: 14 },
+      { petId: "ice-dragon", weight: 8 },
+      { petId: "frost-titan", weight: 3 },
+    ],
+  },
+  {
+    id: "egg-mythical",
+    name: "Mythical Egg",
+    flavor: "Pulses with impossible power. Legends say it predates the universe itself.",
+    cost: 3000,
+    hatchMs: 180_000,
+    rebirthRequired: 25,
+    color: "#c4b5fd",
+    symbol: "✵",
+    hatchTable: [
+      { petId: "rune-stone", weight: 40 },
+      { petId: "astral-wolf", weight: 30 },
+      { petId: "reality-fox", weight: 18 },
+      { petId: "infinity-drake", weight: 9 },
+      { petId: "primordial-god", weight: 3 },
+    ],
+  },
 ];
 
 export const EGG_BY_ID: Record<string, EggDef> = EGGS.reduce(
@@ -165,9 +182,11 @@ export function rollEggHatch(eggId: string): string | null {
 }
 
 export function eggRarityHint(def: EggDef): RarityKey {
-  if (def.rebirthRequired >= 10) return "mythic";
-  if (def.rebirthRequired >= 5) return "legendary";
-  if (def.rebirthRequired >= 3) return "epic";
+  if (def.rebirthRequired >= 25) return "unobtainable";
+  if (def.rebirthRequired >= 15) return "mythic";
+  if (def.rebirthRequired >= 10) return "legendary";
+  if (def.rebirthRequired >= 5) return "epic";
+  if (def.rebirthRequired >= 3) return "rare";
   if (def.cost >= 200) return "epic";
   if (def.cost >= 70) return "rare";
   return "uncommon";

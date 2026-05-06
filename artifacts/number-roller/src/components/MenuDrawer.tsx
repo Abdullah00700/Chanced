@@ -14,9 +14,10 @@ const PAGE_ITEMS: MenuItem[] = [
   { key: "inventory", label: "Inventory", icon: "▢", hint: "Pets · eggs · upgrade pets" },
   { key: "quests", label: "Quests", icon: "✎", hint: "Daily · weekly · special" },
   { key: "events", label: "Events", icon: "❉", hint: "Weather effects" },
+  { key: "bosses", label: "Boss Fights", icon: "⚔", hint: "Battle 10 epic bosses" },
   { key: "pets", label: "Pets · Equip", icon: "✦", hint: "Manage equipped slots" },
   { key: "achievements", label: "Achievements", icon: "★", hint: "Trophies" },
-  { key: "leaderboard", label: "Leaderboard", icon: "≡", hint: "Rarest rolls" },
+  { key: "leaderboard", label: "Leaderboard", icon: "≡", hint: "Top players by level" },
 ];
 
 export function MenuDrawer({
