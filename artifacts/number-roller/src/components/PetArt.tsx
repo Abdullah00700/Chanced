@@ -1550,6 +1550,394 @@ function AbsoluteZero() {
   );
 }
 
+// ============================================================
+// DINOSAUR PETS (15)
+// ============================================================
+function Raptor() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="38" cy="38" rx="14" ry="10" fill="#16a34a" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="52" cy="30" rx="8" ry="6" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="57" cy="28" r="2.5" fill="#052e16" stroke={STROKE} strokeWidth="0.5"/>
+      <circle cx="57.7" cy="27.3" r="0.7" fill="#fff"/>
+      <path d="M58 30 L62 29 L61 32Z" fill="#fbbf24" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M24 44 L20 56 L24 55 L25 58 L30 44Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M40 46 L36 55 L40 54 L41 57 L45 47Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M50 36 L54 26 L58 28 L54 30Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="26" cy="38" rx="5" ry="3" fill="#4ade80" opacity="0.4"/>
+    </svg>
+  );
+}
+function Parasaur() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="42" rx="18" ry="11" fill="#a16207" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="48" cy="32" rx="10" ry="7" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="56" cy="28" rx="7" ry="5" fill="#a16207" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M54 24 L58 20 L60 24 L56 25Z" fill="#ca8a04" stroke={STROKE} strokeWidth="0.5"/>
+      <circle cx="59" cy="26" r="2" fill="#0c0a09" stroke={STROKE} strokeWidth="0.5"/>
+      <circle cx="59.5" cy="25.5" r="0.6" fill="#fff"/>
+      <path d="M16 48 L12 60 L17 59 L18 62 L22 48Z" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M32 50 L28 60 L33 59 L34 62 L38 50Z" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="42" rx="10" ry="5" fill="#ca8a04" opacity="0.3"/>
+    </svg>
+  );
+}
+function Stegosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="30" cy="44" rx="22" ry="12" fill="#065f46" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="48" cy="38" rx="8" ry="6" fill="#047857" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="54" cy="36" r="2.5" fill="#052e16"/>
+      <circle cx="54.5" cy="35.5" r="0.7" fill="#fff"/>
+      {[16,22,28,34,40].map((x,i)=><polygon key={i} points={`${x},${44-i%2*4} ${x-4},${30-i*2} ${x+4},${30-i*2}`} fill="#10b981" stroke={STROKE} strokeWidth="0.5"/>)}
+      <path d="M14 50 L10 62 L15 60 L16 63 L20 50Z" fill="#047857" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M38 52 L34 62 L39 61 L40 63 L44 52Z" fill="#047857" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Ankylosaur() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="28" cy="46" rx="22" ry="12" fill="#713f12" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="48" cy="42" rx="10" ry="7" fill="#78350f" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="54" cy="40" r="2.5" fill="#1c1917"/>
+      <circle cx="54.5" cy="39.5" r="0.7" fill="#fff"/>
+      {[[14,38],[20,34],[26,32],[32,34],[38,36],[44,38]].map(([x,y],i)=>
+        <circle key={i} cx={x} cy={y} r="3.5" fill="#92400e" stroke={STROKE} strokeWidth="0.5"/>
+      )}
+      <ellipse cx="10" cy="50" rx="8" ry="5" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M12 50 L10 62 L16 58 L18 62 L20 50Z" fill="#78350f" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 63 L38 61 L40 63 L44 54Z" fill="#78350f" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Triceratops() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="30" cy="44" rx="20" ry="12" fill="#166534" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="48" cy="36" rx="12" ry="9" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M44 28 L40 14 L48 22Z" fill="#86efac" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M56 30 L64 20 L62 34Z" fill="#86efac" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M52 24 L54 16 L58 22Z" fill="#fbbf24" stroke={STROKE} strokeWidth="0.5"/>
+      <circle cx="56" cy="34" r="2.5" fill="#052e16"/>
+      <circle cx="56.5" cy="33.5" r="0.7" fill="#fff"/>
+      <path d="M14 50 L10 62 L15 61 L16 63 L20 50Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M38 52 L34 62 L39 61 L40 63 L44 52Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Pterodactyl() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <path d="M2 30 Q16 10 32 28 Q48 10 62 30 Q48 26 32 32 Q16 26 2 30Z" fill="#7c3aed" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="32" rx="8" ry="6" fill="#6d28d9" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="38" cy="28" rx="5" ry="4" fill="#7c3aed" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="40" cy="27" r="2" fill="#1c1917"/>
+      <circle cx="40.5" cy="26.5" r="0.6" fill="#fff"/>
+      <path d="M30 34 L28 44 L32 42 L34 46 L36 34Z" fill="#6d28d9" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M28 32 L4 36 L8 30Z" fill="#5b21b6" opacity="0.6"/>
+      <path d="M36 32 L60 36 L56 30Z" fill="#5b21b6" opacity="0.6"/>
+    </svg>
+  );
+}
+function Brachiosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="28" cy="50" rx="20" ry="10" fill="#0369a1" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <rect x="38" y="20" width="8" height="34" rx="4" fill="#0284c7" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="44" cy="16" rx="7" ry="5" fill="#0369a1" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="48" cy="14" r="2" fill="#082f49"/>
+      <circle cx="48.5" cy="13.5" r="0.6" fill="#fff"/>
+      <path d="M42 20 L30 12 L32 18Z" fill="#0284c7" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M14 54 L10 63 L16 61 L18 63 L22 54Z" fill="#0284c7" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M34 54 L30 63 L36 61 L38 63 L42 54Z" fill="#0284c7" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="28" cy="50" rx="10" ry="5" fill="#38bdf8" opacity="0.2"/>
+    </svg>
+  );
+}
+function Spinosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="46" rx="22" ry="12" fill="#0e7490" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="50" cy="36" rx="10" ry="7" fill="#0891b2" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="57" cy="34" r="2.5" fill="#083344"/>
+      <circle cx="57.5" cy="33.5" r="0.7" fill="#fff"/>
+      <path d="M57 34 L62 33 L61 36Z" fill="#fbbf24" stroke={STROKE} strokeWidth="0.5"/>
+      {[20,26,32,38,44].map((x,i)=><path key={i} d={`M${x},42 L${x-2},${28-i*2} L${x+2},${28-i*2}Z`} fill="#22d3ee" stroke={STROKE} strokeWidth="0.5"/>)}
+      <path d="M14 52 L10 63 L16 61 L18 63 L22 52Z" fill="#0891b2" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 63 L38 61 L40 63 L44 54Z" fill="#0891b2" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Allosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="46" rx="20" ry="11" fill="#b91c1c" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="50" cy="36" rx="11" ry="8" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M44 30 Q52 24 58 28 Q56 32 50 32Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="56" cy="30" r="2.5" fill="#0c0a09"/>
+      <circle cx="56.5" cy="29.5" r="0.7" fill="#fff"/>
+      {[56,58,60].map((x,i)=><path key={i} d={`M${x},34 L${x-1},38 L${x+1},38Z`} fill="#fff" stroke={STROKE} strokeWidth="0.3"/>)}
+      <path d="M16 50 L12 62 L17 60 L18 63 L22 50Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M38 52 L34 62 L39 61 L40 63 L44 52Z" fill="#dc2626" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M50 38 L54 28 L58 30 L54 36Z" fill="#ef4444" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Carnotaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="30" cy="46" rx="20" ry="11" fill="#7c2d12" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="48" cy="36" rx="11" ry="8" fill="#9a3412" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="55" cy="34" r="2.5" fill="#1c0a04"/>
+      <circle cx="55.5" cy="33.5" r="0.7" fill="#fff"/>
+      <path d="M46 28 L44 20 L50 26Z" fill="#fbbf24" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M54 28 L56 20 L60 28Z" fill="#fbbf24" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M14 52 L10 63 L16 61 L18 63 L22 52Z" fill="#9a3412" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 63 L38 61 L40 63 L44 54Z" fill="#9a3412" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="30" cy="46" rx="12" ry="6" fill="#ea580c" opacity="0.2"/>
+    </svg>
+  );
+}
+function TRex() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="28" cy="46" rx="20" ry="13" fill="#166534" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="46" cy="32" rx="14" ry="10" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M40 24 Q52 16 60 24 Q58 30 50 32Z" fill="#166534" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="58" cy="26" r="3" fill="#052e16"/>
+      <circle cx="58.8" cy="25.3" r="0.9" fill="#fff"/>
+      {[58,61,63].map((x,i)=><path key={i} d={`M${x},${30+i} L${x-1},36 L${x+1},36Z`} fill="#fff" stroke={STROKE} strokeWidth="0.3"/>)}
+      <ellipse cx="56" cy="42" rx="6" ry="4" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M14 52 L10 64 L17 62 L18 64 L24 52Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 64 L39 62 L40 64 L46 54Z" fill="#15803d" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M8 44 Q14 36 20 42Q14 46 8 44Z" fill="#4ade80" opacity="0.3"/>
+    </svg>
+  );
+}
+function Carcharodont() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="28" cy="46" rx="20" ry="12" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="46" cy="32" rx="14" ry="10" fill="#b45309" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M40 24 Q52 14 62 24 Q60 32 50 32Z" fill="#92400e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="59" cy="26" r="3" fill="#1c0a04"/>
+      <circle cx="59.8" cy="25.3" r="0.9" fill="#fff"/>
+      {[58,61,63].map((x,i)=><path key={i} d={`M${x},${30+i} L${x-1},36 L${x+1},36Z`} fill="#fde68a" stroke={STROKE} strokeWidth="0.3"/>)}
+      <ellipse cx="56" cy="42" rx="5" ry="3" fill="#b45309" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M14 52 L10 63 L17 61 L18 63 L24 52Z" fill="#b45309" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 63 L39 61 L40 63 L46 54Z" fill="#b45309" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Therizinosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="30" cy="46" rx="18" ry="11" fill="#4c1d95" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <rect x="36" y="22" width="7" height="28" rx="3" fill="#5b21b6" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="40" cy="18" rx="6" ry="5" fill="#4c1d95" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="44" cy="17" r="2" fill="#1e1b4b"/>
+      <circle cx="44.5" cy="16.5" r="0.6" fill="#fff"/>
+      <path d="M34 32 L20 16 L26 24Z" fill="#7c3aed" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M34 36 L18 28 L24 30Z" fill="#7c3aed" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M34 40 L18 38 L24 38Z" fill="#7c3aed" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M14 52 L10 62 L16 61 L18 63 L22 52Z" fill="#5b21b6" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M34 54 L30 62 L36 61 L38 63 L42 54Z" fill="#5b21b6" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function Giganotosaurus() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="26" cy="46" rx="22" ry="14" fill="#1e3a5f" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="46" cy="30" rx="16" ry="11" fill="#1d4ed8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M38 20 Q52 8 64 22 Q62 32 50 32Z" fill="#1e3a5f" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="61" cy="24" r="3.5" fill="#030712"/>
+      <circle cx="62" cy="23" r="1" fill="#fff"/>
+      {[60,63].map((x,i)=><path key={i} d={`M${x},${30+i*2} L${x-1.5},38 L${x+1.5},38Z`} fill="#fde68a" stroke={STROKE} strokeWidth="0.3"/>)}
+      <ellipse cx="58" cy="44" rx="6" ry="4" fill="#1d4ed8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M10 52 L6 64 L14 62 L16 64 L22 52Z" fill="#1d4ed8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M32 54 L28 64 L36 62 L38 64 L44 54Z" fill="#1d4ed8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="26" cy="46" rx="14" ry="7" fill="#3b82f6" opacity="0.2"/>
+    </svg>
+  );
+}
+function Dracorex() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="28" cy="46" rx="20" ry="12" fill="#4a044e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="46" cy="32" rx="13" ry="9" fill="#6b21a8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="54" cy="24" rx="8" ry="6" fill="#4a044e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="58" cy="23" r="2.5" fill="#150021"/>
+      <circle cx="58.7" cy="22.3" r="0.8" fill="#f0abfc"/>
+      <path d="M48 20 L44 10 L52 16Z" fill="#e879f9" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M56 20 L54 10 L60 18Z" fill="#e879f9" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M60 22 L64 14 L66 22Z" fill="#e879f9" stroke={STROKE} strokeWidth="0.5"/>
+      <path d="M14 52 L10 63 L17 61 L18 63 L24 52Z" fill="#6b21a8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M36 54 L32 63 L39 61 L40 63 L46 54Z" fill="#6b21a8" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="28" cy="46" rx="12" ry="6" fill="#d946ef" opacity="0.2"/>
+    </svg>
+  );
+}
+
+// ============================================================
+// BOSS DROP PETS (10)
+// ============================================================
+function SlimeSpawn() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="40" rx="18" ry="14" fill="#22c55e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="26" cy="36" r="3" fill="#052e16"/>
+      <circle cx="26.8" cy="35.2" r="1" fill="#fff"/>
+      <circle cx="38" cy="36" r="3" fill="#052e16"/>
+      <circle cx="38.8" cy="35.2" r="1" fill="#fff"/>
+      <path d="M28 44 Q32 48 36 44" stroke="#052e16" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+      <ellipse cx="20" cy="32" rx="6" ry="8" fill="#4ade80" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="44" cy="32" rx="6" ry="8" fill="#4ade80" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="28" rx="8" ry="10" fill="#4ade80" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="50" rx="16" ry="5" fill="#16a34a" opacity="0.4"/>
+    </svg>
+  );
+}
+function GolemShard() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <polygon points="32,8 46,22 44,44 20,44 18,22" fill="#78716c" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <polygon points="32,8 46,22 32,16" fill="#a8a29e" stroke={STROKE} strokeWidth="0.5"/>
+      <polygon points="20,22 18,22 32,16" fill="#d6d3d1" stroke={STROKE} strokeWidth="0.5"/>
+      <circle cx="26" cy="30" r="3" fill="#1c1917"/>
+      <circle cx="26.8" cy="29.2" r="1" fill="#fff"/>
+      <circle cx="38" cy="30" r="3" fill="#1c1917"/>
+      <circle cx="38.8" cy="29.2" r="1" fill="#fff"/>
+      <path d="M28 38 Q32 41 36 38" stroke="#1c1917" strokeWidth="1.5" fill="none"/>
+      <rect x="20" y="44" width="24" height="12" rx="4" fill="#57534e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="56" rx="14" ry="5" fill="#44403c" opacity="0.4"/>
+    </svg>
+  );
+}
+function EmberWhelp() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <Body pal={{ body: "#7c2d12", bodyDark: "#431407", belly: "#ea580c", accent: "#fbbf24" }}>
+        <ellipse cx="32" cy="32" rx="16" ry="14" fill="#991b1b"/>
+        <circle cx="24" cy="28" r="4" fill="#1c0a04"/><circle cx="25" cy="27" r="1.2" fill="#fff"/>
+        <circle cx="40" cy="28" r="4" fill="#1c0a04"/><circle cx="41" cy="27" r="1.2" fill="#fff"/>
+        <path d="M26 38 Q32 44 38 38" stroke="#1c0a04" strokeWidth="1.5" fill="none"/>
+        <path d="M26 18 Q32 8 38 18" fill="#ef4444" stroke={STROKE} strokeWidth="0.5"/>
+        <path d="M20 22 Q14 12 22 14" fill="#f97316" stroke={STROKE} strokeWidth="0.5"/>
+        <path d="M44 22 Q50 12 42 14" fill="#f97316" stroke={STROKE} strokeWidth="0.5"/>
+        <ellipse cx="32" cy="44" rx="12" ry="6" fill="#ea580c" opacity="0.3"/>
+      </Body>
+    </svg>
+  );
+}
+function LeviathanCub() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="38" rx="20" ry="14" fill="#0c4a6e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="38" rx="14" ry="9" fill="#075985" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="24" cy="32" r="3.5" fill="#082f49"/>
+      <circle cx="24.8" cy="31.2" r="1.1" fill="#7dd3fc"/>
+      <circle cx="40" cy="32" r="3.5" fill="#082f49"/>
+      <circle cx="40.8" cy="31.2" r="1.1" fill="#7dd3fc"/>
+      <path d="M28 42 Q32 47 36 42" stroke="#082f49" strokeWidth="1.5" fill="none"/>
+      <path d="M12 34 L4 26 L14 30Z" fill="#0369a1" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M52 34 L60 26 L50 30Z" fill="#0369a1" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M30 50 L24 58 L32 56 L40 58 L34 50Z" fill="#0369a1" stroke={STROKE} strokeWidth={STROKE_W}/>
+    </svg>
+  );
+}
+function StormSprite() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <circle cx="32" cy="32" r="20" fill="#1c1917" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="32" cy="32" r="16" fill="#292524"/>
+      {[0,60,120,180,240,300].map((deg,i)=>{
+        const r2=20, x1=32+r2*Math.cos(deg*Math.PI/180), y1=32+r2*Math.sin(deg*Math.PI/180);
+        return <line key={i} x1="32" y1="32" x2={x1} y2={y1} stroke="#fde047" strokeWidth="1.5" opacity="0.8"/>;
+      })}
+      <circle cx="26" cy="28" r="3" fill="#1c1917"/><circle cx="27" cy="27" r="1" fill="#fde047"/>
+      <circle cx="38" cy="28" r="3" fill="#1c1917"/><circle cx="39" cy="27" r="1" fill="#fde047"/>
+      <path d="M28 38 Q32 43 36 38" stroke="#fde047" strokeWidth="1.5" fill="none"/>
+      <ellipse cx="32" cy="50" rx="16" ry="5" fill="#facc15" opacity="0.15"/>
+    </svg>
+  );
+}
+function ShadowWisp() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="34" rx="16" ry="18" fill="#1e1b4b" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M16 44 Q20 56 24 48 Q28 60 32 50 Q36 62 40 50 Q44 60 48 44" fill="#1e1b4b" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="26" cy="28" r="3.5" fill="#0c0a09"/><circle cx="27" cy="27" r="1.2" fill="#a855f7"/>
+      <circle cx="38" cy="28" r="3.5" fill="#0c0a09"/><circle cx="39" cy="27" r="1.2" fill="#a855f7"/>
+      <path d="M28 38 Q32 42 36 38" stroke="#7c3aed" strokeWidth="1.5" fill="none"/>
+      {[0,1,2,3,4].map(i=><circle key={i} cx={20+i*6} cy={20-i*2} r="1.5" fill="#a855f7" opacity={0.8-i*0.15}/>)}
+      <ellipse cx="32" cy="50" rx="14" ry="5" fill="#7c3aed" opacity="0.2"/>
+    </svg>
+  );
+}
+function VoidFragment() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <polygon points="32,6 44,20 40,38 24,38 20,20" fill="#312e81" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <polygon points="32,6 44,20 32,14" fill="#4338ca"/>
+      <polygon points="20,20 32,14 24,38" fill="#6366f1" opacity="0.5"/>
+      <circle cx="26" cy="26" r="3" fill="#0c0a09"/><circle cx="27" cy="25" r="1" fill="#818cf8"/>
+      <circle cx="38" cy="26" r="3" fill="#0c0a09"/><circle cx="39" cy="25" r="1" fill="#818cf8"/>
+      <path d="M28 34 Q32 38 36 34" stroke="#6366f1" strokeWidth="1.5" fill="none"/>
+      <polygon points="32,38 20,38 24,54 40,54 44,38" fill="#4338ca" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="54" rx="14" ry="5" fill="#4338ca" opacity="0.3"/>
+    </svg>
+  );
+}
+function CosmicEye() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <circle cx="32" cy="32" r="22" fill="#00050f" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="32" cy="32" r="15" fill="#0c1445"/>
+      <circle cx="32" cy="32" r="9" fill="#1e40af"/>
+      <circle cx="32" cy="32" r="5" fill="#3b82f6"/>
+      <circle cx="32" cy="32" r="2" fill="#eff6ff"/>
+      <circle cx="30" cy="30" r="0.8" fill="#fff"/>
+      {[0,45,90,135,180,225,270,315].map((deg,i)=>{
+        const r2=22, x=32+r2*Math.cos(deg*Math.PI/180), y=32+r2*Math.sin(deg*Math.PI/180);
+        return <circle key={i} cx={x} cy={y} r="1.5" fill="#67e8f9" opacity="0.7"/>;
+      })}
+      <ellipse cx="32" cy="52" rx="16" ry="5" fill="#0ea5e9" opacity="0.2"/>
+    </svg>
+  );
+}
+function TitanShard() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <polygon points="32,4 56,28 48,56 16,56 8,28" fill="#9f1239" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <polygon points="32,4 56,28 32,18" fill="#e11d48"/>
+      <polygon points="8,28 32,18 16,56" fill="#fb7185" opacity="0.4"/>
+      <circle cx="26" cy="30" r="4" fill="#0c0a09"/><circle cx="27.5" cy="28.5" r="1.3" fill="#fda4af"/>
+      <circle cx="38" cy="30" r="4" fill="#0c0a09"/><circle cx="39.5" cy="28.5" r="1.3" fill="#fda4af"/>
+      <path d="M27 40 Q32 46 37 40" stroke="#f43f5e" strokeWidth="2" fill="none"/>
+      <ellipse cx="32" cy="56" rx="18" ry="6" fill="#be123c" opacity="0.4"/>
+    </svg>
+  );
+}
+function RealityChip() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <rect x="12" y="12" width="40" height="40" rx="6" fill="#fff" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <rect x="18" y="18" width="28" height="28" rx="3" fill="#e0f2fe"/>
+      <rect x="24" y="24" width="16" height="16" rx="2" fill="#0ea5e9"/>
+      {[18,28,38].map(y=><line key={y} x1="4" y1={y} x2="18" y2={y} stroke="#fff" strokeWidth="1.5"/>)}
+      {[18,28,38].map(y=><line key={y} x1="46" y1={y} x2="60" y2={y} stroke="#fff" strokeWidth="1.5"/>)}
+      {[18,28,38].map(x=><line key={x} x1={x} y1="4" x2={x} y2="18" stroke="#fff" strokeWidth="1.5"/>)}
+      {[18,28,38].map(x=><line key={x} x1={x} y1="46" x2={x} y2="60" stroke="#fff" strokeWidth="1.5"/>)}
+      <circle cx="32" cy="32" r="4" fill="#fff"/>
+      <circle cx="32" cy="32" r="2" fill="#0284c7"/>
+      <ellipse cx="32" cy="56" rx="18" ry="5" fill="#e0f2fe" opacity="0.4"/>
+    </svg>
+  );
+}
+
 const ART_MAP: Record<string, () => React.ReactElement> = {
   pup: Pup,
   bunny: Bunny,
@@ -1631,6 +2019,33 @@ const ART_MAP: Record<string, () => React.ReactElement> = {
   "arctic-guardian": ArcticGuardian,
   "primordial-chaos": PrimordialChaos,
   "absolute-zero": AbsoluteZero,
+  // Dinosaur shop pets
+  raptor: Raptor,
+  parasaur: Parasaur,
+  stegosaurus: Stegosaurus,
+  ankylosaur: Ankylosaur,
+  triceratops: Triceratops,
+  pterodactyl: Pterodactyl,
+  brachiosaurus: Brachiosaurus,
+  spinosaurus: Spinosaurus,
+  allosaurus: Allosaurus,
+  carnotaurus: Carnotaurus,
+  "t-rex": TRex,
+  carcharodont: Carcharodont,
+  therizinosaurus: Therizinosaurus,
+  giganotosaurus: Giganotosaurus,
+  dracorex: Dracorex,
+  // Boss drop pets
+  "slime-spawn": SlimeSpawn,
+  "golem-shard": GolemShard,
+  "ember-whelp": EmberWhelp,
+  "leviathan-cub": LeviathanCub,
+  "storm-sprite": StormSprite,
+  "shadow-wisp": ShadowWisp,
+  "void-fragment": VoidFragment,
+  "cosmic-eye": CosmicEye,
+  "titan-shard": TitanShard,
+  "reality-chip": RealityChip,
 };
 
 export function PetArt({

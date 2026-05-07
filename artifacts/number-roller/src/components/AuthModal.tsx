@@ -115,7 +115,7 @@ export function AuthModal({
     <Modal>
       <div className="mb-3 text-center">
         <div className="text-xs uppercase tracking-[0.3em] text-amber-300">
-          Rarity Roller
+          CHANCED
         </div>
         <h2 className="mt-1 text-2xl font-extrabold text-white">
           {mode === "login"

@@ -68,9 +68,12 @@ import {
 import {
   emptyProfile,
   loadAccounts,
+  loadBossLeaderboard,
   LS_ACTIVE,
   LS_MUTED,
   saveAccounts,
+  saveBossLeaderboard,
+  upsertBossLeader,
 } from "./lib/storage";
 import {
   isMuted,
@@ -82,7 +85,7 @@ import {
   playRollTick,
   setMuted,
 } from "./lib/sounds";
-import type { LeaderEntry, PetInstance, Profile, RarityKey } from "./lib/types";
+import type { BossLeaderEntry, LeaderEntry, PetInstance, Profile, RarityKey } from "./lib/types";
 import {
   pickRandomWeather,
   WEATHER_BY_ID,
@@ -129,6 +132,11 @@ export default function App() {
     localStorage.setItem(LS_MUTED, muted ? "1" : "0");
   }, [muted]);
   void isMuted;
+
+  // ---- Boss leaderboard (local) ----
+  const [bossLeaderboard, setBossLeaderboard] = useState<BossLeaderEntry[]>(
+    () => loadBossLeaderboard(),
+  );
 
   // ---- Leaderboard (global, fetched from API) ----
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([]);
@@ -937,8 +945,16 @@ export default function App() {
     const fight = profile.activeBoss;
     const isWon = fight.bossHp <= 0;
     const isDead = fight.playerHp <= 0;
-    if (!isWon && !isDead) return; // can only exit when fight is over
+    if (!isWon && !isDead) return;
     const boss = BOSS_BY_ID[fight.bossId];
+
+    // Determine boss pet drop BEFORE updateProfile (state is stale inside callback)
+    const dropId = boss?.dropPetId ?? null;
+    const bossDropPet =
+      isWon && dropId && !profile.pets[dropId] && Math.random() < 0.05
+        ? dropId
+        : null;
+
     updateProfile((p) => {
       if (isWon && boss) {
         p.coins += boss.rewardCoins;
@@ -950,12 +966,36 @@ export default function App() {
           p.defeatedBosses = [...p.defeatedBosses, fight.bossId];
         }
         p.bossKills = (p.bossKills ?? 0) + 1;
+        if (bossDropPet) {
+          p.pets = { ...p.pets, [bossDropPet]: { ownedAt: Date.now(), level: 1 } };
+        }
       }
       p.activeBoss = null;
       return p;
     });
+
     if (isWon) {
       playLevelUp();
+      // Update boss leaderboard with fresh counts from profile (post-update)
+      if (activeUser) {
+        const newKills = (profile.bossKills ?? 0) + 1;
+        const newDefeated = profile.defeatedBosses.includes(fight.bossId)
+          ? profile.defeatedBosses
+          : [...profile.defeatedBosses, fight.bossId];
+        const bossEntry: BossLeaderEntry = {
+          username: activeUser,
+          bossKills: newKills,
+          defeatedBosses: newDefeated,
+          timestamp: Date.now(),
+        };
+        const next = upsertBossLeader(bossLeaderboard, bossEntry);
+        setBossLeaderboard(next);
+        saveBossLeaderboard(next);
+      }
+      if (bossDropPet) {
+        playPetDrop();
+        setTimeout(() => setPetDropId(bossDropPet), 800);
+      }
       setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
     }
   }
@@ -1283,7 +1323,7 @@ export default function App() {
       )}
       {tab === "achievements" && <AchievementsView profile={profile} />}
       {tab === "leaderboard" && (
-        <LeaderboardView entries={leaderboard} currentUser={profile.username} />
+        <LeaderboardView entries={leaderboard} bossEntries={bossLeaderboard} currentUser={profile.username} />
       )}
       {tab === "bosses" && (
         <BossesView

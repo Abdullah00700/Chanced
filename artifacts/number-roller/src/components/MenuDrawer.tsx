@@ -194,7 +194,7 @@ export function MenuDrawer({
         </div>
 
         <div className="border-t border-zinc-800/70 px-4 py-2 text-center text-[10px] text-zinc-600">
-          Rarity Roller
+          CHANCED
         </div>
       </aside>
     </div>

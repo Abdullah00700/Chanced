@@ -25,6 +25,8 @@ export type BossDef = {
   art: string;
   auraColor: string;
   bgColor: string;
+  /** Unique pet that has a 5% chance to drop when this boss is defeated for the first time. */
+  dropPetId: string;
 };
 
 export const BOSSES: BossDef[] = [
@@ -67,6 +69,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 100_000,
     rewardXp: 25_000,
     rewardGems: 100,
+    dropPetId: "slime-spawn",
   },
   {
     id: "stone-golem",
@@ -107,6 +110,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 500_000,
     rewardXp: 150_000,
     rewardGems: 500,
+    dropPetId: "golem-shard",
   },
   {
     id: "fire-drake",
@@ -147,6 +151,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 2_500_000,
     rewardXp: 750_000,
     rewardGems: 2_500,
+    dropPetId: "ember-whelp",
   },
   {
     id: "ocean-leviathan",
@@ -187,6 +192,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 15_000_000,
     rewardXp: 5_000_000,
     rewardGems: 12_000,
+    dropPetId: "leviathan-cub",
   },
   {
     id: "thunder-colossus",
@@ -227,6 +233,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 75_000_000,
     rewardXp: 30_000_000,
     rewardGems: 60_000,
+    dropPetId: "storm-sprite",
   },
   {
     id: "shadow-overlord",
@@ -267,6 +274,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 500_000_000,
     rewardXp: 200_000_000,
     rewardGems: 300_000,
+    dropPetId: "shadow-wisp",
   },
   {
     id: "void-emperor",
@@ -307,6 +315,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 2_500_000_000,
     rewardXp: 1_000_000_000,
     rewardGems: 1_500_000,
+    dropPetId: "void-fragment",
   },
   {
     id: "cosmic-horror",
@@ -347,6 +356,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 15_000_000_000,
     rewardXp: 7_500_000_000,
     rewardGems: 7_500_000,
+    dropPetId: "cosmic-eye",
   },
   {
     id: "primordial-titan",
@@ -387,6 +397,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 75_000_000_000,
     rewardXp: 50_000_000_000,
     rewardGems: 37_500_000,
+    dropPetId: "titan-shard",
   },
   {
     id: "reality-shredder",
@@ -427,6 +438,7 @@ export const BOSSES: BossDef[] = [
     rewardCoins: 500_000_000_000,
     rewardXp: 500_000_000_000,
     rewardGems: 200_000_000,
+    dropPetId: "reality-chip",
   },
 ];
 

@@ -126,6 +126,13 @@ export type LeaderEntry = {
   timestamp: number;
 };
 
+export type BossLeaderEntry = {
+  username: string;
+  bossKills: number;
+  defeatedBosses: string[];
+  timestamp: number;
+};
+
 export type RollResult = {
   number: number;
   prob: number;

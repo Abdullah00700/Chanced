@@ -1,6 +1,7 @@
 import type {
   ActiveBossFight,
   ActiveHatch,
+  BossLeaderEntry,
   CorruptedRoll,
   LeaderEntry,
   PetInstance,
@@ -238,6 +239,47 @@ export function loadLeaderboard(): LeaderEntry[] {
 
 export function saveLeaderboard(entries: LeaderEntry[]) {
   localStorage.setItem(LS_LEADERBOARD, JSON.stringify(entries));
+}
+
+export const LS_BOSS_LEADERBOARD = "rr2.boss_leaderboard";
+
+export function loadBossLeaderboard(): BossLeaderEntry[] {
+  try {
+    const raw = localStorage.getItem(LS_BOSS_LEADERBOARD);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? (arr as BossLeaderEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveBossLeaderboard(entries: BossLeaderEntry[]) {
+  localStorage.setItem(LS_BOSS_LEADERBOARD, JSON.stringify(entries));
+}
+
+export function upsertBossLeader(
+  entries: BossLeaderEntry[],
+  candidate: BossLeaderEntry,
+): BossLeaderEntry[] {
+  const idx = entries.findIndex(
+    (e) => e.username.toLowerCase() === candidate.username.toLowerCase(),
+  );
+  let next = [...entries];
+  if (idx >= 0) {
+    next[idx] = {
+      ...next[idx],
+      bossKills: Math.max(next[idx].bossKills, candidate.bossKills),
+      defeatedBosses: candidate.defeatedBosses.length > next[idx].defeatedBosses.length
+        ? candidate.defeatedBosses
+        : next[idx].defeatedBosses,
+      timestamp: Date.now(),
+    };
+  } else {
+    next.push(candidate);
+  }
+  next.sort((a, b) => b.bossKills - a.bossKills);
+  return next.slice(0, 50);
 }
 
 export function upsertLeader(
