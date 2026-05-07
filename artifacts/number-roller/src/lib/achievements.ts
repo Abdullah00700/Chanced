@@ -488,7 +488,7 @@ const A: Achievement[] = [
     description: "Survive a corrupted number roll by defeating it.",
     rarity: "epic",
     reward: { coins: 200000, xp: 50000, gems: 1000 },
-    check: (p) => (p.achievements["corrupted_first"] ?? 0) > 0,
+    check: (p) => (p.corruptedDefeats ?? 0) >= 1,
   },
 
   // ============================ LEGENDARY ============================
@@ -1041,7 +1041,7 @@ const A: Achievement[] = [
     description: "Defeat 5 corrupted numbers.",
     rarity: "legendary",
     reward: { coins: 5000000, xp: 2000000, gems: 50000 },
-    check: (p) => (p.achievements["corrupted_first"] ?? 0) >= 5,
+    check: (p) => (p.corruptedDefeats ?? 0) >= 5,
   },
   {
     id: "pet_level_100",
@@ -1107,6 +1107,110 @@ const A: Achievement[] = [
     reward: { coins: 1000000000, xp: 500000000, gems: 2000000 },
     check: (p) =>
       !!p.pets["t-rex"] && p.defeatedBosses.includes("void-emperor"),
+  },
+
+  // =================== NEW BATCH ===================
+  {
+    id: "rolls_10k",
+    name: "Ten Thousand Rolls",
+    description: "Roll 10,000 times total.",
+    rarity: "epic",
+    reward: { coins: 100000, xp: 50000, gems: 500 },
+    check: (p) => p.totalRolls >= 10_000,
+  },
+  {
+    id: "rolls_2k",
+    name: "Two Thousand Rolls",
+    description: "Roll 2,000 times total.",
+    rarity: "rare",
+    reward: { coins: 20000, xp: 8000, gems: 100 },
+    check: (p) => p.totalRolls >= 2000,
+  },
+  {
+    id: "coins_500m",
+    name: "Half a Billion",
+    description: "Have 500,000,000 coins at once.",
+    rarity: "legendary",
+    reward: { coins: 50000000, xp: 10000000, gems: 50000 },
+    check: (p) => p.coins >= 500_000_000,
+  },
+  {
+    id: "corrupted_10",
+    name: "Uncorruptible",
+    description: "Defeat 10 corrupted numbers.",
+    rarity: "mythic",
+    reward: { coins: 100000000, xp: 50000000, gems: 500000 },
+    check: (p) => (p.corruptedDefeats ?? 0) >= 10,
+  },
+  {
+    id: "mythic_streak_10",
+    name: "Mythic Avalanche",
+    description: "Roll 10 mythics in a row.",
+    rarity: "mythic",
+    reward: { coins: 100000000, xp: 50000000, gems: 1000000 },
+    check: (p) => (p.mythicStreak ?? 0) >= 10,
+  },
+  {
+    id: "weather_first",
+    name: "Weatherman",
+    description: "Manually trigger your first weather event.",
+    rarity: "common",
+    reward: { coins: 1000, xp: 500, gems: 10 },
+    check: (p) =>
+      p.weather.manualCooldownUntil > 0 || p.weather.activeId !== null,
+  },
+  {
+    id: "level_400",
+    name: "Four Hundred",
+    description: "Reach level 400.",
+    rarity: "legendary",
+    reward: { coins: 50000000, xp: 0, gems: 50000 },
+    check: (p) => p.level >= 400,
+  },
+  {
+    id: "void_hydra_buy",
+    name: "Three-Headed Terror",
+    description: "Purchase the Void Hydra pet.",
+    rarity: "mythic",
+    reward: { coins: 0, xp: 500000000, gems: 500000 },
+    check: (p) => !!p.pets["void-hydra"],
+  },
+  {
+    id: "crystal_phoenix_buy",
+    name: "Born From Crystal",
+    description: "Purchase the Crystal Phoenix pet.",
+    rarity: "legendary",
+    reward: { coins: 0, xp: 100000000, gems: 100000 },
+    check: (p) => !!p.pets["crystal-phoenix"],
+  },
+  {
+    id: "endgame_trio",
+    name: "End-Game Arsenal",
+    description: "Own the Void Hydra, Crystal Phoenix, and Absolute Zero simultaneously.",
+    rarity: "mythic",
+    reward: { coins: 5000000000, xp: 2000000000, gems: 5000000 },
+    check: (p) =>
+      !!p.pets["void-hydra"] &&
+      !!p.pets["crystal-phoenix"] &&
+      !!p.pets["absolute-zero"],
+  },
+  {
+    id: "eclipse_trigger",
+    name: "Dark Sun",
+    description: "Manually trigger a Solar Eclipse event.",
+    rarity: "rare",
+    reward: { coins: 50000, xp: 20000, gems: 200 },
+    check: (p) =>
+      p.weather.activeId === "eclipse" ||
+      p.weather.manualCooldownUntil > 0,
+  },
+  {
+    id: "gems_100k",
+    name: "Gem Mountain",
+    description: "Have 100,000 gems at once.",
+    rarity: "legendary",
+    reward: { coins: 5000000, xp: 2000000, gems: 0 },
+    check: (p) => p.gems >= 100_000,
   },
 ];
 

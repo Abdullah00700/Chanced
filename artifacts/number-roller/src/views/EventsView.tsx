@@ -104,7 +104,9 @@ export function EventsView({
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {WEATHER_EVENTS.map((w) => {
-            const disabled = cooldown > 0 || profile.weather.activeId === w.id;
+            const isActive = profile.weather.activeId === w.id;
+            const cantAfford = (w.gemCost ?? 0) > 0 && profile.gems < w.gemCost;
+            const disabled = cooldown > 0 || isActive || cantAfford;
             return (
               <button
                 key={w.id}
@@ -137,6 +139,16 @@ export function EventsView({
                   <div className="truncate text-[9px] text-zinc-500">
                     {Math.round(w.durationMs / 1000)}s · {w.flavor}
                   </div>
+                  {(w.gemCost ?? 0) > 0 && (
+                    <div
+                      className={
+                        "text-[9px] font-bold " +
+                        (cantAfford ? "text-red-400" : "text-violet-300")
+                      }
+                    >
+                      💎 {w.gemCost} gems
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -148,6 +160,7 @@ export function EventsView({
         Auto events fire every{" "}
         {Math.round(WEATHER_AUTO_INTERVAL_MS / 60_000)} minutes regardless of
         activity. Effects apply globally to your rolls while active.
+        Premium events (💎 cost) can only be triggered manually.
       </div>
     </div>
   );

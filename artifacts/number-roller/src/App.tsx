@@ -413,7 +413,7 @@ export default function App() {
           } else if (p.corruptedRoll) {
             if (distFromCtr >= p.corruptedRoll.distance) {
               p.corruptedRoll = null;
-              p.achievements = { ...p.achievements, corrupted_first: Date.now() };
+              p.corruptedDefeats = (p.corruptedDefeats ?? 0) + 1;
             }
           }
         }
@@ -882,7 +882,10 @@ export default function App() {
     if (!def) return;
     if (profile.weather.manualCooldownUntil > now) return;
     if (profile.weather.activeId === weatherId) return;
+    const gemCost = def.gemCost ?? 0;
+    if (profile.gems < gemCost) return;
     updateProfile((p) => {
+      p.gems -= gemCost;
       p.weather = {
         activeId: def.id,
         activeUntil: Date.now() + def.durationMs,
@@ -896,6 +899,7 @@ export default function App() {
       bumpWeekly(p, "w-events-5");
       return p;
     });
+    setTimeout(() => checkAndAwardAchievements({ lastRoll: null }), 0);
   }
 
   // ---- Rebirth ----

@@ -110,6 +110,7 @@ export type Profile = {
   defeatedBosses: string[];
   activeBoss: ActiveBossFight | null;
   bossKills: number;
+  corruptedDefeats: number;
 
   corruptedRoll: CorruptedRoll | null;
 

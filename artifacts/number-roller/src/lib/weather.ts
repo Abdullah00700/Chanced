@@ -22,6 +22,8 @@ export type WeatherDef = {
   glyph: string;
   /** css overlay class — see index.css */
   overlayClass: string;
+  /** Gem cost to manually trigger this event (0 = free). */
+  gemCost: number;
 };
 
 export const WEATHER_EVENTS: WeatherDef[] = [
@@ -35,6 +37,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#60a5fa",
     glyph: "☂",
     overlayClass: "weather-rain",
+    gemCost: 0,
   },
   {
     id: "thunder",
@@ -46,6 +49,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#a78bfa",
     glyph: "⚡",
     overlayClass: "weather-thunder",
+    gemCost: 5,
   },
   {
     id: "meteor-shower",
@@ -57,6 +61,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#fbbf24",
     glyph: "☄",
     overlayClass: "weather-meteor",
+    gemCost: 25,
   },
   {
     id: "acid-rain",
@@ -68,6 +73,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#84cc16",
     glyph: "☢",
     overlayClass: "weather-acid",
+    gemCost: 15,
   },
   {
     id: "tsunami",
@@ -79,6 +85,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#0ea5e9",
     glyph: "≋",
     overlayClass: "weather-tsunami",
+    gemCost: 20,
   },
   {
     id: "tornado",
@@ -90,6 +97,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#94a3b8",
     glyph: "🌀",
     overlayClass: "weather-tornado",
+    gemCost: 10,
   },
   {
     id: "snow",
@@ -101,6 +109,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#bae6fd",
     glyph: "❄",
     overlayClass: "weather-snow",
+    gemCost: 0,
   },
   {
     id: "aurora",
@@ -112,6 +121,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#22d3ee",
     glyph: "✦",
     overlayClass: "weather-aurora",
+    gemCost: 30,
   },
   {
     id: "eclipse",
@@ -123,6 +133,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#1e1b4b",
     glyph: "◐",
     overlayClass: "weather-eclipse",
+    gemCost: 50,
   },
   {
     id: "heatwave",
@@ -134,6 +145,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#f97316",
     glyph: "☼",
     overlayClass: "weather-heatwave",
+    gemCost: 0,
   },
   {
     id: "fog",
@@ -145,6 +157,7 @@ export const WEATHER_EVENTS: WeatherDef[] = [
     color: "#cbd5e1",
     glyph: "≈",
     overlayClass: "weather-fog",
+    gemCost: 0,
   },
 ];
 

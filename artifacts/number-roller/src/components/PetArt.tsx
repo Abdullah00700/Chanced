@@ -1938,6 +1938,83 @@ function RealityChip() {
   );
 }
 
+function ThunderSerpent() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="36" rx="18" ry="22" fill="#7c3aed" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="20" rx="13" ry="14" fill="#8b5cf6" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="16" rx="9" ry="7" fill="#a78bfa"/>
+      <circle cx="27" cy="18" r="3.2" fill="#1a0f08"/>
+      <circle cx="37" cy="18" r="3.2" fill="#1a0f08"/>
+      <circle cx="27.8" cy="17.2" r="1.1" fill="#fde68a"/>
+      <circle cx="37.8" cy="17.2" r="1.1" fill="#fde68a"/>
+      <path d="M26 27 Q32 31 38 27" stroke={STROKE} strokeWidth="1.5" fill="none"/>
+      <path d="M32 8 L28 4 L33 6 L30 1 L35 5 L33 2 L37 6 Z" fill="#facc15" stroke={STROKE} strokeWidth="1"/>
+      <path d="M22 32 L18 28 L21 33 L16 32 L20 37 Z" fill="#facc15" stroke={STROKE} strokeWidth="0.8"/>
+      <path d="M42 32 L46 28 L43 33 L48 32 L44 37 Z" fill="#facc15" stroke={STROKE} strokeWidth="0.8"/>
+      <ellipse cx="32" cy="54" rx="14" ry="4" fill="#6d28d9" opacity="0.4"/>
+    </svg>
+  );
+}
+function TimeKeeper() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="36" rx="18" ry="20" fill="#0f766e" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="22" rx="14" ry="14" fill="#14b8a6" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <circle cx="32" cy="22" r="10" fill="#0d9488"/>
+      <circle cx="32" cy="22" r="8" fill="#ccfbf1" stroke={STROKE} strokeWidth="1"/>
+      <line x1="32" y1="22" x2="32" y2="15" stroke={STROKE} strokeWidth="2" strokeLinecap="round"/>
+      <line x1="32" y1="22" x2="37" y2="24" stroke={STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+      {[0,30,60,90,120,150,180,210,240,270,300,330].map((deg,i)=>{
+        const r=7.5, x=32+r*Math.cos((deg-90)*Math.PI/180), y=22+r*Math.sin((deg-90)*Math.PI/180);
+        return <circle key={i} cx={x} cy={y} r="0.8" fill="#0f766e"/>;
+      })}
+      <path d="M22 6 Q28 2 32 4 Q36 2 42 6" stroke={STROKE} strokeWidth="1.5" fill="none"/>
+      <ellipse cx="32" cy="54" rx="14" ry="4" fill="#0d9488" opacity="0.4"/>
+    </svg>
+  );
+}
+function NebulaStalker() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="38" rx="20" ry="20" fill="#1e1b4b" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="22" rx="14" ry="14" fill="#312e81" stroke={STROKE} strokeWidth={STROKE_W}/>
+      {[12,22,32,42,52].map((x,i)=>[14,22,30].map((y,j)=>(
+        <circle key={`${i}-${j}`} cx={x+(Math.sin(i*j)*3)} cy={y} r={0.8+(i+j)*0.15} fill={["#a855f7","#818cf8","#60a5fa","#34d399","#f472b6"][i]} opacity="0.7"/>
+      )))}
+      <ellipse cx="32" cy="22" rx="8" ry="6" fill="#4338ca" opacity="0.9"/>
+      <circle cx="27" cy="20" r="3" fill="#0f0e1a"/>
+      <circle cx="37" cy="20" r="3" fill="#0f0e1a"/>
+      <circle cx="27.8" cy="19" r="1.2" fill="#a855f7"/>
+      <circle cx="37.8" cy="19" r="1.2" fill="#a855f7"/>
+      <polygon points="22,10 25,16 22,14" fill="#818cf8" stroke={STROKE} strokeWidth="0.8"/>
+      <polygon points="42,10 39,16 42,14" fill="#818cf8" stroke={STROKE} strokeWidth="0.8"/>
+      <path d="M27 27 Q32 31 37 27" stroke={STROKE} strokeWidth="1.5" fill="none"/>
+      <ellipse cx="32" cy="56" rx="16" ry="4" fill="#312e81" opacity="0.4"/>
+    </svg>
+  );
+}
+function CrystalPhoenix() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <ellipse cx="32" cy="38" rx="14" ry="16" fill="#0891b2" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <ellipse cx="32" cy="24" rx="12" ry="12" fill="#22d3ee" stroke={STROKE} strokeWidth={STROKE_W}/>
+      <path d="M14 28 Q4 18 10 8 Q22 16 20 28 Z" fill="#67e8f9" stroke={STROKE} strokeWidth="1.5"/>
+      <path d="M50 28 Q60 18 54 8 Q42 16 44 28 Z" fill="#67e8f9" stroke={STROKE} strokeWidth="1.5"/>
+      <path d="M14 28 Q6 14 12 4 Q18 14 16 28 Z" fill="#a5f3fc" opacity="0.7"/>
+      <path d="M50 28 Q58 14 52 4 Q46 14 48 28 Z" fill="#a5f3fc" opacity="0.7"/>
+      <polygon points="28,8 30,2 32,6 34,2 36,8 32,5" fill="#e0f2fe" stroke="#0891b2" strokeWidth="0.5"/>
+      <polygon points="28,14 30,10 32,13 34,10 36,14 32,12" fill="#bae6fd" stroke="#0891b2" strokeWidth="0.5" opacity="0.8"/>
+      <circle cx="28" cy="22" r="3" fill="#0c4a6e"/>
+      <circle cx="36" cy="22" r="3" fill="#0c4a6e"/>
+      <circle cx="28.8" cy="21" r="1.2" fill="#7dd3fc"/>
+      <circle cx="36.8" cy="21" r="1.2" fill="#7dd3fc"/>
+      <path d="M27 29 Q32 33 37 29" stroke={STROKE} strokeWidth="1.5" fill="none"/>
+      <ellipse cx="32" cy="54" rx="14" ry="4" fill="#0891b2" opacity="0.4"/>
+    </svg>
+  );
+}
+
 const ART_MAP: Record<string, () => React.ReactElement> = {
   pup: Pup,
   bunny: Bunny,
@@ -2003,6 +2080,10 @@ const ART_MAP: Record<string, () => React.ReactElement> = {
   "storm-giant": StormGiant,
   "void-hydra": VoidHydra,
   "chaos-titan": ChaosTitan,
+  "thunder-serpent": ThunderSerpent,
+  "time-keeper": TimeKeeper,
+  "nebula-stalker": NebulaStalker,
+  "crystal-phoenix": CrystalPhoenix,
   // Arctic Egg pets
   "arctic-fox": ArcticFox,
   "polar-bear": PolarBear,
