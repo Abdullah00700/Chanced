@@ -9,6 +9,14 @@ import {
   apiSubmitLeader,
   apiSyncProfile,
 } from "./lib/api";
+import {
+  spinGacha,
+  type GachaResult,
+  GACHA_SPIN_COST,
+  gachaCooldownMs,
+} from "./lib/gacha";
+import { GachaView } from "./views/GachaView";
+import { FriendsModal } from "./components/FriendsModal";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { MenuDrawer } from "./components/MenuDrawer";
@@ -209,6 +217,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [petDropId, setPetDropId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [showFriends, setShowFriends] = useState(false);
   const toastIdRef = useRef(0);
   const [now, setNow] = useState(Date.now());
 
@@ -1214,6 +1223,53 @@ export default function App() {
     setLastResult(null);
     setAuraColor(null);
   }
+  function doGachaSpin(): GachaResult | null {
+    if (!profile) return null;
+    const now = Date.now();
+    if (gachaCooldownMs(profile.lastGachaSpin ?? 0) > 0) return null;
+    if (profile.coins < GACHA_SPIN_COST) return null;
+    const result = spinGacha();
+    updateProfile((p) => {
+      const next = { ...p, coins: p.coins - GACHA_SPIN_COST, lastGachaSpin: now };
+      if (result.kind === "coins") {
+        next.coins += result.amount;
+      } else {
+        const existing = next.pets[result.petId];
+        if (existing) {
+          next.pets = { ...next.pets, [result.petId]: { ...existing, level: existing.level + 1 } };
+        } else {
+          next.pets = { ...next.pets, [result.petId]: { ownedAt: now, level: 1 } };
+        }
+      }
+      return next;
+    });
+    return result;
+  }
+
+  function handleClaimedGift(type: string, petId: string | null, coins: number | null) {
+    const now = Date.now();
+    updateProfile((p) => {
+      const next = { ...p };
+      if (type === "coins" && coins) {
+        next.coins = p.coins + coins;
+      } else if (type === "pet" && petId) {
+        const existing = next.pets[petId];
+        if (existing) {
+          next.pets = { ...next.pets, [petId]: { ...existing, level: existing.level + 1 } };
+        } else {
+          next.pets = { ...next.pets, [petId]: { ownedAt: now, level: 1 } };
+        }
+      } else if (type === "sent-coins" && coins) {
+        next.coins = Math.max(0, p.coins - coins);
+      } else if (type === "sent-pet" && petId) {
+        const { [petId]: _removed, ...rest } = next.pets;
+        void _removed;
+        next.pets = rest;
+      }
+      return next;
+    });
+  }
+
   function handleWipe() {
     if (!activeUser || !profile) return;
     const fresh = emptyProfile(profile.username, profile.passwordHash);
@@ -1341,6 +1397,9 @@ export default function App() {
           onExitBoss={doExitBoss}
         />
       )}
+      {tab === "gacha" && (
+        <GachaView profile={profile} onSpin={doGachaSpin} />
+      )}
 
       <BottomNav active={tab} onChange={setTab} bossActive={!!profile.activeBoss} />
 
@@ -1351,6 +1410,7 @@ export default function App() {
         onChangeTab={setTab}
         onOpenSave={() => setShowSave(true)}
         onOpenWipe={() => setShowWipe(true)}
+        onOpenFriends={() => setShowFriends(true)}
         onLogout={handleLogout}
       />
 
@@ -1372,6 +1432,14 @@ export default function App() {
             equipPet(petDropId, undefined);
             setPetDropId(null);
           }}
+        />
+      )}
+
+      {showFriends && profile && (
+        <FriendsModal
+          profile={profile}
+          onClose={() => setShowFriends(false)}
+          onClaimedGift={handleClaimedGift}
         />
       )}
 

@@ -198,6 +198,7 @@ function migrateProfile(raw: any): Profile {
     bossKills: typeof raw.bossKills === "number" ? raw.bossKills : 0,
     corruptedDefeats: typeof raw.corruptedDefeats === "number" ? raw.corruptedDefeats : 0,
     corruptedRoll: migrateCorruptedRoll(raw),
+    lastGachaSpin: typeof raw.lastGachaSpin === "number" ? raw.lastGachaSpin : 0,
     createdAt: raw.createdAt ?? Date.now(),
     schemaVersion: 5,
   };
@@ -379,6 +380,7 @@ export function emptyProfile(
     bossKills: 0,
     corruptedDefeats: 0,
     corruptedRoll: null,
+    lastGachaSpin: 0,
     createdAt: Date.now(),
     schemaVersion: 5,
   };

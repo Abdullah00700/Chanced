@@ -30,6 +30,7 @@ function migrateLoaded(raw: any): Profile {
     rollsByRarity,
     pets,
     mythicStreak: raw.mythicStreak ?? 0,
+    lastGachaSpin: raw.lastGachaSpin ?? 0,
     schemaVersion: 3,
   };
 }

@@ -9,15 +9,16 @@ type MenuItem = {
 };
 
 const PAGE_ITEMS: MenuItem[] = [
-  { key: "roll", label: "Roll", icon: "◎", hint: "Spin the curve" },
-  { key: "shop", label: "Shop", icon: "▲", hint: "Upgrades, boosters, eggs, rebirth" },
-  { key: "inventory", label: "Inventory", icon: "▢", hint: "Pets · eggs · upgrade pets" },
-  { key: "quests", label: "Quests", icon: "✎", hint: "Daily · weekly · special" },
-  { key: "events", label: "Events", icon: "❉", hint: "Weather effects" },
-  { key: "bosses", label: "Boss Fights", icon: "⚔", hint: "Battle 10 epic bosses" },
-  { key: "pets", label: "Pets · Equip", icon: "✦", hint: "Manage equipped slots" },
-  { key: "achievements", label: "Achievements", icon: "★", hint: "Trophies" },
-  { key: "leaderboard", label: "Leaderboard", icon: "≡", hint: "Top players by level" },
+  { key: "roll",         label: "Roll",          icon: "◎", hint: "Spin the curve" },
+  { key: "gacha",        label: "Gacha",         icon: "◈", hint: "Spin for exclusive pets & coins" },
+  { key: "shop",         label: "Shop",          icon: "▲", hint: "Upgrades, boosters, eggs, rebirth" },
+  { key: "inventory",    label: "Inventory",     icon: "▢", hint: "Pets · eggs · upgrade pets" },
+  { key: "quests",       label: "Quests",        icon: "✎", hint: "Daily · weekly · special" },
+  { key: "events",       label: "Events",        icon: "❉", hint: "Weather effects" },
+  { key: "bosses",       label: "Boss Fights",   icon: "⚔", hint: "Battle 10 epic bosses" },
+  { key: "pets",         label: "Pets · Equip",  icon: "✦", hint: "Manage equipped slots" },
+  { key: "achievements", label: "Achievements",  icon: "★", hint: "Trophies" },
+  { key: "leaderboard",  label: "Leaderboard",   icon: "≡", hint: "Top players by level" },
 ];
 
 export function MenuDrawer({
@@ -27,6 +28,7 @@ export function MenuDrawer({
   onChangeTab,
   onOpenSave,
   onOpenWipe,
+  onOpenFriends,
   onLogout,
 }: {
   open: boolean;
@@ -35,6 +37,7 @@ export function MenuDrawer({
   onChangeTab: (t: Tab) => void;
   onOpenSave: () => void;
   onOpenWipe: () => void;
+  onOpenFriends: () => void;
   onLogout: () => void;
 }) {
   useEffect(() => {
@@ -127,6 +130,31 @@ export function MenuDrawer({
                 </li>
               );
             })}
+          </ul>
+
+          <div className="mb-2 mt-5 px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            Social
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            <li>
+              <button
+                onClick={() => {
+                  onOpenFriends();
+                  onClose();
+                }}
+                className="flex w-full items-center gap-3 rounded-lg border border-purple-700/40 bg-purple-950/30 px-3 py-2.5 text-left active:scale-[0.99] active:bg-purple-950/50"
+              >
+                <span className="text-xl leading-none text-purple-300">✦</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-extrabold text-purple-100">
+                    Friends &amp; Gifts
+                  </span>
+                  <span className="block text-[10px] text-purple-300/60">
+                    Add friends · send pets &amp; coins
+                  </span>
+                </span>
+              </button>
+            </li>
           </ul>
 
           <div className="mb-2 mt-5 px-1 text-[10px] font-bold uppercase tracking-widest text-zinc-500">

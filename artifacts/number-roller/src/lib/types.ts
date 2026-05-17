@@ -114,6 +114,8 @@ export type Profile = {
 
   corruptedRoll: CorruptedRoll | null;
 
+  lastGachaSpin: number;
+
   createdAt: number;
   schemaVersion: 5;
 };

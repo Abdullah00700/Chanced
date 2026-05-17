@@ -7,15 +7,16 @@ export type Tab =
   | "pets"
   | "achievements"
   | "leaderboard"
-  | "bosses";
+  | "bosses"
+  | "gacha";
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: "roll", label: "Roll", icon: "◎" },
-  { key: "shop", label: "Shop", icon: "▲" },
-  { key: "inventory", label: "Inv", icon: "▢" },
-  { key: "quests", label: "Quests", icon: "✎" },
-  { key: "bosses", label: "Bosses", icon: "⚔" },
-  { key: "events", label: "Events", icon: "❉" },
+  { key: "roll",      label: "Roll",   icon: "◎" },
+  { key: "shop",      label: "Shop",   icon: "▲" },
+  { key: "inventory", label: "Inv",    icon: "▢" },
+  { key: "quests",    label: "Quests", icon: "✎" },
+  { key: "bosses",    label: "Bosses", icon: "⚔" },
+  { key: "gacha",     label: "Gacha",  icon: "◈" },
 ];
 
 export function BottomNav({
@@ -33,6 +34,7 @@ export function BottomNav({
         {TABS.map((t) => {
           const isActive = t.key === active;
           const isBossTab = t.key === "bosses";
+          const isGachaTab = t.key === "gacha";
           return (
             <button
               key={t.key}
@@ -42,7 +44,9 @@ export function BottomNav({
                 (isActive
                   ? isBossTab && bossActive
                     ? "text-red-400"
-                    : "text-amber-300"
+                    : isGachaTab
+                      ? "text-purple-300"
+                      : "text-amber-300"
                   : isBossTab && bossActive
                     ? "text-red-500 animate-pulse"
                     : "text-zinc-500 active:text-zinc-300")
@@ -54,7 +58,9 @@ export function BottomNav({
                   (isActive
                     ? isBossTab && bossActive
                       ? "drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]"
-                      : "drop-shadow-[0_0_6px_rgba(252,211,77,0.6)]"
+                      : isGachaTab
+                        ? "drop-shadow-[0_0_6px_rgba(192,132,252,0.7)]"
+                        : "drop-shadow-[0_0_6px_rgba(252,211,77,0.6)]"
                     : "")
                 }
               >

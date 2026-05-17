@@ -37,7 +37,7 @@ export type PetDef = {
   art: string;
   costCoins: number;
   costGems: number;
-  source?: "shop" | "egg" | "special";
+  source?: "shop" | "egg" | "special" | "gacha";
   fromEgg?: string;
   unobtainable?: boolean;
   /** If true, this unobtainable-rarity pet CAN be purchased from the shop. */
@@ -1423,6 +1423,63 @@ export const PETS: PetDef[] = [
     source: "shop",
     unobtainable: true,
     shopBuyable: true,
+  },
+
+  // ---- GACHA EXCLUSIVES ----
+  {
+    id: "prism-fox",
+    name: "Prism Fox",
+    baseRarity: "common",
+    effect: { coinMult: 1.3 },
+    flavor: "Its prismatic tail scatters light into coins wherever it walks.",
+    art: "prism-fox",
+    costCoins: 0,
+    costGems: 0,
+    source: "gacha",
+  },
+  {
+    id: "void-serpent",
+    name: "Void Serpent",
+    baseRarity: "rare",
+    effect: { xpMult: 1.65 },
+    flavor: "Slithers through the gaps between numbers, absorbing pure experience.",
+    art: "void-serpent",
+    costCoins: 0,
+    costGems: 0,
+    source: "gacha",
+  },
+  {
+    id: "celestial-dragon",
+    name: "Celestial Dragon",
+    baseRarity: "epic",
+    effect: { coinMult: 1.4, rarityTilt: 0.015 },
+    flavor: "A dragon born from collapsed stars. Its breath shifts probability itself.",
+    art: "celestial-dragon",
+    costCoins: 0,
+    costGems: 0,
+    source: "gacha",
+  },
+  {
+    id: "chrono-wolf",
+    name: "Chrono Wolf",
+    baseRarity: "legendary",
+    effect: { rarityTilt: 0.045, coinMult: 1.2 },
+    flavor: "Runs ahead of time itself. Its howl bends the odds toward the rare.",
+    art: "chrono-wolf",
+    costCoins: 0,
+    costGems: 0,
+    source: "gacha",
+  },
+  {
+    id: "nebula-phoenix",
+    name: "Nebula Phoenix",
+    baseRarity: "mythic",
+    effect: { coinMult: 1.7, xpMult: 1.5, rarityTilt: 0.06 },
+    flavor: "Reborn from dying galaxies. All numbers bow before its cosmic fire.",
+    art: "nebula-phoenix",
+    costCoins: 0,
+    costGems: 0,
+    source: "gacha",
   },
 ];
 
