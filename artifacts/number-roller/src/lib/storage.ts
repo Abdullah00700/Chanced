@@ -311,14 +311,21 @@ export function upsertLeader(
   return next.slice(0, 50);
 }
 
-export function migrateProfileExport(raw: any): Profile {
-  return migrateProfile(raw);
+export async function sha256(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-export function emptyProfile(username: string): Profile {
+export function emptyProfile(
+  username: string,
+  passwordHash: string,
+): Profile {
   return {
     username,
-    passwordHash: "",
+    passwordHash,
     coins: 0,
     gems: 0,
     xp: 0,
