@@ -5,10 +5,11 @@ import {
 } from "./components/AchievementToast";
 import { AuthModal } from "./components/AuthModal";
 import {
-  apiGetLeaderboard,
-  apiSubmitLeader,
-  apiSyncProfile,
-} from "./lib/api";
+  firebaseLogout,
+  getLeaderboardFromFirestore,
+  saveProfileToFirestore,
+  submitLeaderToFirestore,
+} from "./lib/firebase-ops";
 import { BottomNav, type Tab } from "./components/BottomNav";
 import { Header } from "./components/Header";
 import { MenuDrawer } from "./components/MenuDrawer";
@@ -114,14 +115,23 @@ const NORMAL_TIERS: RarityKey[] = [
   "mythic",
 ];
 
+const LS_FB_UID = "rr2.fbuid";
+
 export default function App() {
   // ---- Auth state ----
   const [accounts, setAccountsState] = useState<Record<string, Profile>>(() =>
     loadAccounts(),
   );
+  const accountsRef = useRef<Record<string, Profile>>(accounts);
+  useEffect(() => { accountsRef.current = accounts; }, [accounts]);
   const [activeUser, setActiveUser] = useState<string | null>(() => {
     return localStorage.getItem(LS_ACTIVE);
   });
+  const [firebaseUid, setFirebaseUid] = useState<string | null>(() =>
+    localStorage.getItem(LS_FB_UID),
+  );
+  const firebaseUidRef = useRef<string | null>(firebaseUid);
+  useEffect(() => { firebaseUidRef.current = firebaseUid; }, [firebaseUid]);
 
   // Sound mute
   const [muted, setMutedState] = useState<boolean>(() => {
@@ -144,14 +154,14 @@ export default function App() {
     let cancelled = false;
     async function refresh() {
       try {
-        const entries = await apiGetLeaderboard();
+        const entries = await getLeaderboardFromFirestore();
         if (!cancelled) setLeaderboard(entries);
       } catch {
         // ignore — keep what we have
       }
     }
     void refresh();
-    const id = window.setInterval(refresh, 30_000);
+    const id = window.setInterval(refresh, 60_000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
@@ -161,18 +171,18 @@ export default function App() {
   // ---- Active profile ----
   const profile = activeUser ? accounts[activeUser] ?? null : null;
 
-  // ---- Cloud sync: push the active profile to the server, debounced ----
+  // ---- Cloud sync: push the active profile to Firestore, debounced ----
   useEffect(() => {
-    if (!profile) return;
-    const username = profile.username;
-    const passwordHash = profile.passwordHash;
+    const uid = firebaseUidRef.current;
+    if (!profile || !uid) return;
     const snapshot = profile;
     const id = window.setTimeout(() => {
-      void apiSyncProfile(username, passwordHash, snapshot).catch(() => {
+      void saveProfileToFirestore(uid, snapshot).catch(() => {
         // ignore — local cache still holds the latest
       });
     }, 800);
     return () => window.clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
   function persistAccounts(next: Record<string, Profile>) {
@@ -182,10 +192,10 @@ export default function App() {
 
   function updateProfile(mut: (p: Profile) => Profile) {
     if (!activeUser) return;
-    const cur = accounts[activeUser];
+    const cur = accountsRef.current[activeUser];
     if (!cur) return;
     const updated = mut({ ...cur });
-    const next = { ...accounts, [activeUser]: updated };
+    const next = { ...accountsRef.current, [activeUser]: updated };
     persistAccounts(next);
   }
 
@@ -453,20 +463,21 @@ export default function App() {
         mythicStreak: nextMythicStreak,
       });
 
-      // Leaderboard — always submit to keep level fresh
-      if (profile) {
-        const submitEntry = {
-          number: n,
-          prob: result.prob,
-          rarity: result.rarity,
-          level: profile.level,
-        };
-        void apiSubmitLeader(profile.username, profile.passwordHash, submitEntry)
-          .then(() => apiGetLeaderboard())
-          .then((entries) => setLeaderboard(entries))
-          .catch(() => {
-            // ignore
-          });
+      // Leaderboard — submit only on personal best
+      const uid = firebaseUidRef.current;
+      if (profile && uid) {
+        const isPersonalBest =
+          profile.rarestProb == null || result.prob < profile.rarestProb;
+        if (isPersonalBest) {
+          const submitEntry = {
+            username: profile.username,
+            number: n,
+            prob: result.prob,
+            rarity: result.rarity,
+            level: profile.level,
+          };
+          void submitLeaderToFirestore(uid, submitEntry).catch(() => {});
+        }
       }
 
       // Effects
@@ -1089,6 +1100,9 @@ export default function App() {
         case "shark-eats-fish": {
           if ((draft.pets["fish"]?.level ?? 0) > 0) {
             draft.coins += def.effect.abilityPayload ?? 6000;
+            const { fish: _eaten, ...remainingPets } = draft.pets;
+            void _eaten;
+            draft.pets = remainingPets;
           }
           break;
         }
@@ -1195,25 +1209,28 @@ export default function App() {
   }, [now, activeUser]);
 
   // ---- Auth handlers ----
-  function handleAuthed(p: Profile, passwordHash: string) {
-    // Cloud profile is authoritative; ensure local hash matches the one we used to sign in.
-    const merged: Profile = { ...p, passwordHash };
+  function handleAuthed(p: Profile, uid: string) {
     const key = p.username.toLowerCase();
-    const next = { ...accounts, [key]: merged };
+    const next = { ...accounts, [key]: p };
     persistAccounts(next);
     setActiveUser(key);
+    setFirebaseUid(uid);
     localStorage.setItem(LS_ACTIVE, key);
+    localStorage.setItem(LS_FB_UID, uid);
   }
   function handleLogout() {
+    void firebaseLogout().catch(() => {});
     setActiveUser(null);
+    setFirebaseUid(null);
     localStorage.removeItem(LS_ACTIVE);
+    localStorage.removeItem(LS_FB_UID);
     setTab("roll");
     setLastResult(null);
     setAuraColor(null);
   }
   function handleWipe() {
     if (!activeUser || !profile) return;
-    const fresh = emptyProfile(profile.username, profile.passwordHash);
+    const fresh = emptyProfile(profile.username);
     const next = { ...accounts, [activeUser]: fresh };
     persistAccounts(next);
     setShowWipe(false);

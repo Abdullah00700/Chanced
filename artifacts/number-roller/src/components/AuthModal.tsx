@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
-import { apiLogin, apiSignup } from "../lib/api";
+import {
+  firebaseLogin,
+  firebaseSignup,
+  firebaseImportSave,
+} from "../lib/firebase-ops";
 import { decodeSave } from "../lib/save";
-import { emptyProfile, sha256 } from "../lib/storage";
+import { isFirebaseConfigured } from "../lib/firebase";
 import type { Profile } from "../lib/types";
 
 type Mode = "login" | "signup" | "code";
@@ -10,10 +14,8 @@ type Mode = "login" | "signup" | "code";
 export function AuthModal({
   onAuthed,
 }: {
-  onAuthed: (profile: Profile, passwordHash: string) => void;
+  onAuthed: (profile: Profile, uid: string) => void;
 }) {
-  // Always default to signup so new players are prompted to register.
-  // Existing users can switch to the Login tab.
   const [mode, setMode] = useState<Mode>("signup");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,87 +23,88 @@ export function AuthModal({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const firebaseReady = isFirebaseConfigured();
+
   async function submit() {
     setErr(null);
     if (busy) return;
+    if (!firebaseReady) {
+      setErr("Firebase is not configured. Please add your Firebase credentials.");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "login") {
         const u = username.trim();
-        if (!u) {
-          setErr("Enter your username.");
-          return;
-        }
-        if (password.length < 1) {
-          setErr("Enter your password.");
-          return;
-        }
-        const hash = await sha256(password);
+        if (!u) { setErr("Enter your username."); return; }
+        if (password.length < 1) { setErr("Enter your password."); return; }
         try {
-          const profile = await apiLogin(u, hash);
-          onAuthed(profile, hash);
+          const { user, profile } = await firebaseLogin(u, password);
+          onAuthed(profile, user.uid);
         } catch (e) {
           const msg = (e as Error).message;
-          if (msg === "no account") setErr("No account with that username.");
-          else if (msg === "wrong password") setErr("Wrong password.");
-          else setErr("Couldn't sign in. Check your connection and try again.");
+          if (msg.includes("auth/invalid-credential") || msg.includes("auth/wrong-password") || msg.includes("auth/user-not-found")) {
+            setErr("Wrong username or password.");
+          } else if (msg === "no profile") {
+            setErr("Account exists but profile is missing. Contact support.");
+          } else {
+            setErr("Couldn't sign in. Check your connection and try again.");
+          }
         }
         return;
       }
+
       if (mode === "signup") {
         const u = username.trim();
         if (u.length < 2 || u.length > 16 || !/^[\w-]+$/.test(u)) {
           setErr("2–16 chars: letters, numbers, _ or -");
           return;
         }
-        if (password.length < 4) {
-          setErr("Password must be at least 4 characters.");
+        if (password.length < 6) {
+          setErr("Password must be at least 6 characters.");
           return;
         }
-        const hash = await sha256(password);
-        const profile = emptyProfile(u, hash);
         try {
-          const created = await apiSignup(u, hash, profile);
-          onAuthed(created, hash);
+          const { user, profile } = await firebaseSignup(u, password);
+          onAuthed(profile, user.uid);
         } catch (e) {
           const msg = (e as Error).message;
-          if (msg === "username taken") setErr("Username already taken.");
-          else setErr("Couldn't create account. Try again.");
+          if (msg === "username taken" || msg.includes("auth/email-already-in-use")) {
+            setErr("Username already taken.");
+          } else if (msg.includes("auth/weak-password")) {
+            setErr("Password must be at least 6 characters.");
+          } else {
+            setErr("Couldn't create account. Try again.");
+          }
         }
         return;
       }
+
       if (mode === "code") {
         const decoded = decodeSave(code);
         if (!decoded) {
           setErr("Invalid save code.");
           return;
         }
-        if (password.length < 1) {
-          setErr("Enter the password for this account.");
+        if (password.length < 6) {
+          setErr("Password must be at least 6 characters.");
           return;
         }
-        const hash = await sha256(password);
-        if (hash !== decoded.passwordHash) {
-          setErr("Wrong password for this save code.");
-          return;
-        }
-        // Try to log in to existing cloud account; if missing, create it from the code.
         try {
-          const remote = await apiLogin(decoded.username, hash);
-          onAuthed(remote, hash);
+          const { user, profile } = await firebaseImportSave(
+            decoded.username,
+            password,
+            decoded,
+          );
+          onAuthed(profile, user.uid);
         } catch (e) {
           const msg = (e as Error).message;
-          if (msg === "no account") {
-            try {
-              const created = await apiSignup(decoded.username, hash, decoded);
-              onAuthed(created, hash);
-            } catch (e2) {
-              setErr("Couldn't restore account from code.");
-            }
-          } else if (msg === "wrong password") {
-            setErr("Password doesn't match the cloud account for this name.");
+          if (msg.includes("auth/invalid-credential") || msg.includes("auth/wrong-password")) {
+            setErr("Wrong password for that account.");
+          } else if (msg.includes("auth/weak-password")) {
+            setErr("Password must be at least 6 characters.");
           } else {
-            setErr("Couldn't reach the server. Try again.");
+            setErr("Couldn't restore account. Check your password and try again.");
           }
         }
         return;
@@ -122,9 +125,15 @@ export function AuthModal({
             ? "Welcome back"
             : mode === "signup"
               ? "Create account"
-              : "Load save code"}
+              : "Import save code"}
         </h2>
       </div>
+
+      {!firebaseReady && (
+        <div className="mb-3 rounded-md border border-amber-700/40 bg-amber-950/40 px-2 py-1.5 text-[11px] text-amber-300">
+          Firebase credentials not configured. Add your VITE_FIREBASE_* environment variables to enable cloud accounts.
+        </div>
+      )}
 
       <div className="mb-3 flex rounded-lg border border-zinc-800 bg-zinc-900/40 p-0.5 text-xs font-bold">
         {(["login", "signup", "code"] as Mode[]).map((m) => (
@@ -168,12 +177,17 @@ export function AuthModal({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
-          placeholder="password"
+          placeholder={mode === "code" ? "password for this account" : "password"}
           className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-amber-500"
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
           }}
         />
+        {mode === "code" && (
+          <p className="text-[10px] text-zinc-500">
+            Enter a password (6+ chars) to link this save to a new cloud account, or your existing password to log back in.
+          </p>
+        )}
         {err && (
           <div className="rounded-md border border-rose-700/40 bg-rose-950/40 px-2 py-1.5 text-[11px] text-rose-300">
             {err}
@@ -181,7 +195,7 @@ export function AuthModal({
         )}
         <button
           onClick={submit}
-          disabled={busy}
+          disabled={busy || !firebaseReady}
           className="mt-1 rounded-lg bg-gradient-to-b from-amber-400 to-orange-500 px-4 py-2.5 text-sm font-extrabold text-zinc-950 shadow-md active:scale-[0.99] disabled:opacity-60"
         >
           {busy
@@ -190,10 +204,10 @@ export function AuthModal({
               ? "Log in"
               : mode === "signup"
                 ? "Create account"
-                : "Load save"}
+                : "Import save"}
         </button>
         <p className="mt-1 text-center text-[10px] text-zinc-500">
-          Accounts sync to the cloud so you can play across devices.
+          Accounts sync to the cloud — play across any device.
         </p>
       </div>
     </Modal>
