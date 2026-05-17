@@ -4,10 +4,15 @@ import { and, eq, isNull, or } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+async function getAccount(username: string) {
+  const rows = await db.select().from(accountsTable).where(eq(accountsTable.username, username));
+  return rows[0] ?? null;
+}
+
 async function authenticate(username: string, passwordHash: string): Promise<boolean> {
   if (typeof username !== "string" || typeof passwordHash !== "string") return false;
-  const rows = await db.select().from(accountsTable).where(eq(accountsTable.username, username.toLowerCase()));
-  return rows[0]?.passwordHash === passwordHash;
+  const acc = await getAccount(username.toLowerCase());
+  return acc?.passwordHash === passwordHash;
 }
 
 async function areFriends(a: string, b: string): Promise<boolean> {
@@ -22,21 +27,40 @@ async function areFriends(a: string, b: string): Promise<boolean> {
 
 router.post("/gifts/send", async (req, res) => {
   const { username, passwordHash, toUsername, type, petId, coinsAmount } = req.body ?? {};
-  const fromKey = username?.toLowerCase?.();
+  const fromKey = typeof username === "string" ? username.toLowerCase() : null;
   const toKey = typeof toUsername === "string" ? toUsername.toLowerCase() : null;
   if (!fromKey || !toKey || !type) return res.status(400).json({ error: "invalid input" });
-  if (!(await authenticate(fromKey, passwordHash))) {
+  if (fromKey === toKey) return res.status(400).json({ error: "cannot gift yourself" });
+
+  const senderAcc = await getAccount(fromKey).catch(() => null);
+  if (!senderAcc || senderAcc.passwordHash !== passwordHash) {
     return res.status(401).json({ error: "unauthorized" });
   }
+
   if (!(await areFriends(fromKey, toKey))) {
     return res.status(403).json({ error: "not friends" });
   }
-  if (type === "coins" && (typeof coinsAmount !== "number" || coinsAmount < 1)) {
-    return res.status(400).json({ error: "invalid coins amount" });
+
+  const senderProfile = senderAcc.profile as Record<string, any>;
+
+  if (type === "coins") {
+    if (typeof coinsAmount !== "number" || coinsAmount < 1) {
+      return res.status(400).json({ error: "invalid coins amount" });
+    }
+    const senderCoins: number = typeof senderProfile?.coins === "number" ? senderProfile.coins : 0;
+    if (coinsAmount > senderCoins) {
+      return res.status(400).json({ error: "insufficient coins" });
+    }
+  } else if (type === "pet") {
+    if (typeof petId !== "string") return res.status(400).json({ error: "invalid pet" });
+    const petInst = senderProfile?.pets?.[petId];
+    if (!petInst || typeof petInst.level !== "number" || petInst.level < 1) {
+      return res.status(400).json({ error: "you don't own that pet" });
+    }
+  } else {
+    return res.status(400).json({ error: "invalid gift type" });
   }
-  if (type === "pet" && typeof petId !== "string") {
-    return res.status(400).json({ error: "invalid pet" });
-  }
+
   try {
     await db.insert(giftsTable).values({
       fromUsername: fromKey,
@@ -79,7 +103,7 @@ router.get("/gifts/pending", async (req, res) => {
 router.post("/gifts/claim/:id", async (req, res) => {
   const { username, passwordHash } = req.body ?? {};
   const giftId = parseInt(req.params["id"] ?? "", 10);
-  const key = username?.toLowerCase?.();
+  const key = typeof username === "string" ? username.toLowerCase() : null;
   if (!key || isNaN(giftId)) return res.status(400).json({ error: "invalid input" });
   if (!(await authenticate(key, passwordHash))) {
     return res.status(401).json({ error: "unauthorized" });

@@ -1253,6 +1253,7 @@ export default function App() {
       if (type === "coins" && coins) {
         next.coins = p.coins + coins;
       } else if (type === "pet" && petId) {
+        // Receiver gets +1 level on the pet (or gets it at level 1 if new)
         const existing = next.pets[petId];
         if (existing) {
           next.pets = { ...next.pets, [petId]: { ...existing, level: existing.level + 1 } };
@@ -1262,9 +1263,17 @@ export default function App() {
       } else if (type === "sent-coins" && coins) {
         next.coins = Math.max(0, p.coins - coins);
       } else if (type === "sent-pet" && petId) {
-        const { [petId]: _removed, ...rest } = next.pets;
-        void _removed;
-        next.pets = rest;
+        // Sender loses 1 level; pet is removed when level drops to 0
+        const existing = next.pets[petId];
+        if (existing) {
+          if (existing.level <= 1) {
+            const { [petId]: _removed, ...rest } = next.pets;
+            void _removed;
+            next.pets = rest;
+          } else {
+            next.pets = { ...next.pets, [petId]: { ...existing, level: existing.level - 1 } };
+          }
+        }
       }
       return next;
     });
